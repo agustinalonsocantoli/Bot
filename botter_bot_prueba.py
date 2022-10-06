@@ -2,6 +2,8 @@ from datetime import datetime
 from lib2to3.pgen2 import token
 import telebot
 import threading
+import locale
+locale.setlocale(locale.LC_ALL, 'es-ES')
 
 # Token de indetificación
 token = "5420608268:AAHmtRiwizz4Mpmbuy2GQEuHt4hZhT5Wsp0"
@@ -11,23 +13,23 @@ bot = telebot.TeleBot(token)
 # Creo variable de current date
 fecha_hora = datetime.today() 
 
-def informar_dia():
+# def informar_dia():
 
-    # crear variable para el dia de semana
-    dia_semana = fecha_hora.weekday()
+#     # crear variable para el dia de semana
+#     dia_semana = fecha_hora.weekday()
 
-    # diccionario con nombres de dias
-    calendario = {0: 'Lunes',
-                  1: 'Martes',
-                  2: 'Miércoles',
-                  3: 'Jueves',
-                  4: 'Viernes',
-                  5: 'Sábado',
-                  6: 'Domingo'}
+#     # diccionario con nombres de dias
+#     calendario = {0: 'Lunes',
+#                   1: 'Martes',
+#                   2: 'Miércoles',
+#                   3: 'Jueves',
+#                   4: 'Viernes',
+#                   5: 'Sábado',
+#                   6: 'Domingo'}
 
-    # decir el dia de la semana
-    dia = calendario[dia_semana]
-    return dia
+#     # decir el dia de la semana
+#     dia = calendario[dia_semana]
+#     return dia
 
 
 #Se aplica saludo a comando start
@@ -44,7 +46,7 @@ def cmd_start(message):
 @bot.message_handler(content_types=["text"])
 def bot_mensaje_texto(message):
 
-    mensaje_datetime = f"Hoy es {informar_dia()} {fecha_hora.strftime('%d')} Mes {fecha_hora.strftime('%m')} Año {fecha_hora.strftime('%Y')}\nSon las {fecha_hora.strftime('%H:%M:%S')}"
+    mensaje_datetime = f"Hoy es {fecha_hora.strftime('%A')} {fecha_hora.strftime('%d')} Mes {fecha_hora.strftime('%B')} Año {fecha_hora.strftime('%Y')}\nSon las {fecha_hora.strftime('%H:%M:%S')}"
 
     if message.text and message.text.startswith("/"):
         bot.send_chat_action(message.chat.id, "typing")
