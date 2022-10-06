@@ -46,7 +46,7 @@ def cmd_start(message):
 @bot.message_handler(content_types=["text"])
 def bot_mensaje_texto(message):
 
-    mensaje_datetime = f"Hoy es {fecha_hora.strftime('%A')} {fecha_hora.strftime('%d')} Mes {fecha_hora.strftime('%B')} Año {fecha_hora.strftime('%Y')}\nSon las {fecha_hora.strftime('%H:%M:%S')}"
+    mensaje_datetime = f"Hoy es {fecha_hora.strftime('%A')} {fecha_hora.strftime('%d')} de {fecha_hora.strftime('%B').capitalize()} Año {fecha_hora.strftime('%Y')}\nSon las {fecha_hora.strftime('%H:%M:%S')}"
 
     if message.text and message.text.startswith("/"):
         bot.send_chat_action(message.chat.id, "typing")
