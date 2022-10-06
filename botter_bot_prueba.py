@@ -1,4 +1,5 @@
 from datetime import datetime
+from email import message
 from lib2to3.pgen2 import token
 from tkinter import Button
 import types
@@ -34,15 +35,15 @@ def informar_dia():
 
 
 #Se estable comando '/hora'
-@bot.message_handler(commands=["help", "start"])  
+@bot.message_handler(commands=["start"])  
 def enviar(message):
     #Se aplica formato a la respuesta
     bot.reply_to(message, f"Hola!!\nHoy es {informar_dia()} {fecha_hora.strftime('%d')} del {fecha_hora.strftime('%m')} y son las {fecha_hora.strftime('%H:%M:%S')}")
 
 
-@bot.message_handler(func=lambda message:True) 
-def mensaje(massage):
-     bot.reply_to(massage, massage.text) 
+@bot.message_handler(commands=["ayuda"])
+def mensaje(message):
+    bot.reply_to(message, 'En que puedo ayudarte')
 
     
 #Mantiene actividad del bot
