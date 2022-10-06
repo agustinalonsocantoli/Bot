@@ -67,4 +67,6 @@ if __name__ == '__main__':
     # Hilo BOT lo defino para ejecutar la funcion en segundo plano 
     # nos permite arrancar el bot y poder seguir haciendo cosas desde el main para que se ejecuten
     hilo_bot = threading.Thread(name="hilo_bot", target=recibir_mensajes)
+    hilo_bot.start()
+
 
