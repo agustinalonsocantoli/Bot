@@ -1,103 +1,157 @@
 from datetime import datetime
-from email import message
+from distutils.log import error
+from gc import callbacks
 from lib2to3.pgen2 import token
-from unicodedata import name
 import telebot
 import threading
-# Se establece lenguaje Español
-import locale
-locale.setlocale(locale.LC_ALL, 'es-ES')
-from telebot.types import ReplyKeyboardMarkup # Para crear botones
-from telebot.types import ForceReply # Se utiliza para responder a los mensajes del bot
+# import locale # LENGUAJE ESPAÑOL
+# locale.setlocale(locale.LC_ALL, 'es-ES')
+from telebot.types import ReplyKeyboardMarkup # CREAR BOTONES
+from telebot.types import ForceReply # RESPONDER A LOS MENSAJES DEL BOT
+from telebot.types import ReplyKeyboardRemove # ELIMINAR BOTONES DESPUES DE USARLOS
+from telebot.types import InlineKeyboardMarkup # CREAMOS BOTONERA
+from telebot.types import InlineKeyboardButton # DEFINIMOS BOTONES
 
-# Token de indetificación
+# TOKEN IDENTIFICACION
 token = "5420608268:AAHmtRiwizz4Mpmbuy2GQEuHt4hZhT5Wsp0"
 bot = telebot.TeleBot(token)     
 
 
-# Creo variable de current date
+# VARIABLE FECHA Y HORA
 fecha_hora = datetime.today() 
-#Variable global para guardar datos de usuarios
+
+#LISTA USUARIOS
 usuarios = {}
 
-#Se aplica saludo a comando start
+
+# COMANDO START SALUDA
 @bot.message_handler(commands=["start"])  
 def cmd_start(message):
-    #Incio del bot saludando y preguntando nombre
+    #BOT INICIA Y SALUDA
+    markup = ReplyKeyboardRemove()
+    bot.send_message(message.chat.id, f"Hola soy Botter!!\nEstoy aqui para ayudarle presione /usuario para cargar sus datos!",
+    reply_markup=markup)
+
+
+# COMANDO usuario
+@bot.message_handler(commands=["usuario"])  
+def cmd_usuario(message):
+    #BOT PREGUNTA DATOS DEL USUARIO
     markup = ForceReply()
-    mensaje = bot.send_message(message.chat.id, f"Hola soy Botter!!\nCómo te llamas?", reply_markup= markup)
-    bot.send_chat_action(message.chat.id, "typing")
-    bot.register_next_step_handler(mensaje, preguntar_edad)
+    mensaje_usuario = bot.send_message(message.chat.id, f"Como es tu nombre?", reply_markup=markup)
+    bot.register_next_step_handler(mensaje_usuario, preguntar_apellido)
+
+    
+def preguntar_apellido(message):
+    
+    usuarios[message.chat.id] = {}
+    usuarios[message.chat.id]["nombre"] = message.text
+    global nombre 
+    nombre = usuarios[message.chat.id]["nombre"]
+    markup = ForceReply()
+    mensaje_usuario = bot.send_message(message.chat.id, f"Un gusto {nombre}, como es tu apellido?", reply_markup= markup)
+    bot.register_next_step_handler(mensaje_usuario, confirmar_datos)
+        
+
+def confirmar_datos(message):
+    # MOSTRAMOS DATOS, DEFINIMOS BOTONES DE CONFIRMACION
+    usuarios[message.chat.id]["apellido"] = message.text
+    global apellido 
+    apellido = usuarios[message.chat.id]["apellido"]
+    markup = ReplyKeyboardMarkup(
+       one_time_keyboard=True,
+       input_field_placeholder="Pulsa un boton",
+       resize_keyboard=True
+       )
+    markup.add("Si", "No")
+    global datos
+    datos = bot.send_message(message.chat.id, f"Nombre: {nombre}\nApellido: {apellido}\nTus datos son correcto?", reply_markup=markup)
+    bot.register_next_step_handler(datos, guardar_datos)
     
 
-def preguntar_edad(message):
-    # Se Pregunta la edad
-    usuarios[message.chat.id]={}
-    usuarios[message.chat.id]["nombre"]= message.text
-    bot.send_chat_action(message.chat.id, "typing")
-    markup = ForceReply()
-    mensaje = bot.send_message(message.chat.id, f"Un gusto "+ usuarios[message.chat.id]["nombre"]+"\nQué edad tienes?", reply_markup= markup)
-    bot.register_next_step_handler(mensaje, corroborar_datos)
-        
-def corroborar_datos(message):
-    #Se verifica que los datos para edad sean numéricos
-    if not message.text.isdigit():
-        #Informamos el error
-        markup = ForceReply()
-        mensaje = bot.send_message(message.chat.id, "Debes ingresar solo números para tu edad")  
-        bot.register_next_step_handler(mensaje, corroborar_datos)
-    else:
-        # Guardamos la edad correcta
-        usuarios[message.chat.id]["edad"]= int(message.text)
-        # Creamos un markup para el formato de botonera
-        markup = ReplyKeyboardMarkup(
-            one_time_keyboard=True, 
-            input_field_placeholder="Pulsa un botón"
-            )
-        #Añadimos los botones
-        markup.add("Si", "No")
-        mensaje = bot.send_message(message.chat.id, f"Genial!\nEstos son tus Datos?\n{usuarios[message.chat.id]['nombre']}\n{usuarios[message.chat.id]['edad']}", reply_markup=markup)
-        bot.register_next_step_handler(mensaje, guardar_datos)
-
 def guardar_datos(message):
-    #Comprobamos que la entrada de opciones sea válida 
-    if message.text != "Si" and message.text != "No":
-        mensaje = bot.send_message(message.chat.id, "ERROR: Debe pulsar uno de los dos botoness!")
-        bot.register_next_step_handler(mensaje, guardar_datos)
-    #Si elegimos 'No' comenzaremos desde el inicio (a optimizar)
-    elif not message.text == "Si":
-         bot.register_next_step_handler(message, cmd_start)
+    # COMPROBAMOS QUE LA ENTRADA SEA VALIDA
+    markup = ReplyKeyboardRemove()
 
-             
-        
-## CONTINUA MANTENIENDO LA FUNCIONALIDA AL ESCRIBIR 'HORA' O "FECHA"
+    if message.text != "Si" and message.text != "No":
+        mensaje_usuario = bot.send_message(message.chat.id, "ERROR: Debe pulsar uno de los dos botoness!")
+        bot.register_next_step_handler(mensaje_usuario, guardar_datos)
+    elif message.text == "Si":
+        bot.send_message(message.chat.id, f"{nombre} {apellido} pulse /ayuda para ver las opciones", reply_markup=markup)
+        del usuarios[message.chat.id]
+    elif message.text == "No":
+        bot.send_message(message.chat.id, "Porfavor vuelva a ingresar sus datos pulsando /usuario", reply_markup=markup)
+
+
+
+# COMANDO OPCIONES
+@bot.message_handler(commands=["ayuda"])  
+def cmd_ayuda(message):
+    try:
+        #BOT DESPLEGA LAS OPCIONES CON BOTONES PARA QUE EL USUARIO SELECCIONE
+        # markup = ReplyKeyboardRemove()
+        markup = InlineKeyboardMarkup(row_width=1)
+        b1 = InlineKeyboardButton("DIVISION DE GASTOS", url="https://www.splitwise.com/l/c/su/pauS8uxygQU")
+        b2 = InlineKeyboardButton("LOCALIZACION FACIL", url="https://www.google.es/maps/?hl=es")
+        b3 = InlineKeyboardButton("HORA", callback_data="hora")
+        b4 = InlineKeyboardButton("FECHA", callback_data="fecha")
+        b5 = InlineKeyboardButton("CERRAR", callback_data="cerrar")
+
+        markup.add(b1, b2, b3, b4, b5)
+        bot.send_message(message.chat.id, f"{nombre} {apellido} En que puedo ayudarlo", reply_markup=markup)
+    except:
+        bot.send_message(message.chat.id, "Debe ingresar sus datos, pulse /usuario")
+
+
+
+@bot.callback_query_handler(func=lambda x: True)
+def respuesta_botones(call):
+    # VARIABLES PARA LA FECHA Y HORA
+    dia = f"{fecha_hora.strftime('%A')} {fecha_hora.strftime('%d')}"
+    hora = fecha_hora.strftime('%H:%M:%S')
+    mes = fecha_hora.strftime('%B').capitalize()
+    anio= fecha_hora.strftime('%Y')
+    mensaje_fecha = f"Hoy es {dia} de {mes} Año {anio}"
+    mensaje_hora = f"Son las {hora}"
+
+    # GESTIONAR LAS ACCIONES DE LOS BOTONES CALLBACK DATA
+    cid = call.from_user.id  # CHAT ID 
+    mid = call.message.id  # MENSAJE ID
+    if call.data == "cerrar":
+        bot.delete_message(cid, mid)
+    elif call.data == "hora":
+        bot.send_message(cid, mensaje_hora)
+    elif call.data == "fecha":
+        bot.send_message(cid, mensaje_fecha)
+
+
+
 ## BOT REACCIONA AL TEXTO DEL USUARIO QUE NO SON COMANDOS
 @bot.message_handler(content_types=["text"])
 def bot_mensaje_texto(message):
 
-    mensaje_datetime = f"Hoy es {fecha_hora.strftime('%A')} {fecha_hora.strftime('%d')} de {fecha_hora.strftime('%B').capitalize()} Año {fecha_hora.strftime('%Y')}\nSon las {fecha_hora.strftime('%H:%M:%S')}"
-
     if message.text and message.text.startswith("/"):
-        bot.send_chat_action(message.chat.id, "typing")
         bot.send_message(message.chat.id, "Comando no definido")
-    elif message.text.lower() == 'fecha' or message.text.lower() == 'hora':
-        bot.send_chat_action(message.chat.id, "typing")
-        bot.send_message(message.chat.id, mensaje_datetime)
     else:
-        bot.send_chat_action(message.chat.id, "typing")
-        bot.send_message(message.chat.id, "No entiendo lo que quieres decir, ingresa hora o fecha y te brindare informacion")
+        bot.send_message(message.chat.id, "No entiendo lo que quieres decir, ingresa /ayuda")
 
 
-# Bucle infinito, verifica la recepcion de los mensajes del usuario
+
+# FUNCION BUCLE INFINITO VERIFICA LA RECEPCION DE MENSAJES
 def recibir_mensajes():
     bot.infinity_polling()
 
-# Inicia el bot en class main
+# INICIA BOT EN CLASE MAIN
 if __name__ == '__main__':
 
-    # Hilo BOT lo defino para ejecutar la funcion en segundo plano 
-    # nos permite arrancar el bot y poder seguir haciendo cosas desde el main para que se ejecuten
+    # MOSTRAR LOS COMANDOS EN TELEGRAM
+    bot.set_my_commands([
+        telebot.types.BotCommand("start", "Inicia el Bot"),
+        telebot.types.BotCommand("usuario", "Completar Datos"),
+        telebot.types.BotCommand("ayuda", "Opciones del Bot")
+    ])
+
+    # HILO BOT DEFINIDO PARA EJECUTAR LA FUNCION EN SEGUNDO PLANO Y CONTINUAR EL CODIGO 
     hilo_bot = threading.Thread(name="hilo_bot", target=recibir_mensajes)
     hilo_bot.start()
-
 
