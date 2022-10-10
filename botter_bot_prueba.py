@@ -1,6 +1,4 @@
 from datetime import datetime
-from distutils.log import error
-from gc import callbacks
 from lib2to3.pgen2 import token
 import telebot
 import threading
