@@ -4,6 +4,7 @@ from telebot.types import ReplyKeyboardMarkup # CREAR BOTONES
 from telebot.types import ForceReply # RESPONDER A LOS MENSAJES DEL BOT
 from telebot.types import ReplyKeyboardRemove # ELIMINAR BOTONES DESPUES DE USARLOS
 
+
 personas = []
 gastos = []
 personas_cargadas = []
@@ -17,17 +18,16 @@ bot = telebot.TeleBot(token)
 # COMANDO START SALUDA
 @bot.message_handler(commands=["start"])  
 def cmd_start(message):
-    #BOT INICIA Y SALUDA
+    # BOT INICIA Y SALUDA
     bot.send_message(message.chat.id, f"Hola")
 
 
 ## BOT REACCIONA AL TEXTO DEL USUARIO QUE NO SON COMANDOS
-@bot.message_handler(content_types=["text"])
+@bot.message_handler(func=lambda x: True)
 def preguntar_nombre(message):
-    #PRGUNTA NOMBRE
-    markup = ForceReply()
-    mensaje_nombre = bot.send_message(message.chat.id, f"Ingrese nombre?", reply_markup=markup)
-    bot.register_next_step_handler(mensaje_nombre, preguntar_gasto)
+        markup = ForceReply()
+        mensaje_nombre = bot.send_message(message.chat.id, f"Ingrese nombre?", reply_markup=markup)
+        bot.register_next_step_handler(mensaje_nombre, preguntar_gasto)
 
     
 def preguntar_gasto(message):
@@ -54,7 +54,7 @@ def continuar_finalizar(message):
     global datos
     datos = bot.send_message(message.chat.id, f"Nombre: {nombre}\nGasto: ${gasto}\n", reply_markup=markup)
     bot.register_next_step_handler(datos, guardar_datos)
-    
+
 
 def guardar_datos(message):
     # COMPROBAMOS QUE LA ENTRADA SEA VALIDA
@@ -91,12 +91,15 @@ def guardar_datos(message):
             indice += 1
             gastos_divididos.append(resultado)
 
+        comienzo = 0
+        contador = 0
+
         indice = 0
         for n in personas:
             for g in gastos:
                 if indice <= len(personas)-1 or indice <= len(gastos)-1:
                     if gastos_divididos[indice] < 0:
-                        personas_gastos_divididos.append(f"{personas[indice]} - PAGAR (${gastos_divididos[indice]})")
+                        personas_gastos_divididos.append(f"{personas[indice]} - PAGAR (${gastos_divididos[indice] * -1})")
                     elif gastos_divididos[indice] > 0:
                         personas_gastos_divididos.append(f"{personas[indice]} - COBRAR (${gastos_divididos[indice]})")
                     indice += 1
@@ -104,9 +107,40 @@ def guardar_datos(message):
         mostrar_division_final = "\n".join(personas_gastos_divididos)
         bot.send_message(message.chat.id, mostrar_division_final)
 
+        while True:
+            if comienzo <= personas_a_dividir - 1:
+                for g in gastos_divididos:
+                    if contador <= personas_a_dividir - 1:
+                        
+                        if gastos_divididos[comienzo] != 0 and gastos_divididos[contador] != 0:
+                            if gastos_divididos[comienzo] < 0 and gastos_divididos[contador] > 0:
+                                comparacion = gastos_divididos[comienzo] + gastos_divididos[contador]
+                                if comparacion < 0:
+                                    final = gastos_divididos[contador]
+                                    gastos_divididos[comienzo] = comparacion
+                                    gastos_divididos[contador] = 0.0
+                                elif comparacion > 0:
+                                    final = gastos_divididos[comienzo] * -1
+                                    gastos_divididos[contador] = comparacion
+                                    gastos_divididos[comienzo] = 0.0
+                                elif comparacion == 0:
+                                    final = gastos_divididos[comienzo] * -1
+                                    gastos_divididos[contador] = 0.0
+                                    gastos_divididos[comienzo] = 0.0
+                                mostrar_cancelaciones = f"{personas[comienzo]} le debe {final} a {personas[contador]}"
+                                bot.send_message(message.chat.id, mostrar_cancelaciones)
+
+                        contador += 1
+
+                contador = 0
+                comienzo += 1
+            else:
+                break
+
     elif message.text == "Agregar":
         mensaje_usuario = bot.send_message(message.chat.id, "Bien, continuemos", reply_markup=markup)
         bot.register_next_step_handler(mensaje_usuario, preguntar_nombre)
+      
 
 
 
