@@ -29,10 +29,10 @@ def cmd_busqueda(message):
     #BOT DESPLEGA LAS OPCIONES CON BOTONES PARA QUE EL USUARIO SELECCIONE
     # markup = ReplyKeyboardRemove()
     markup = InlineKeyboardMarkup(row_width=1)
-    b_vuelos = InlineKeyboardButton("Vuelos", callback_data="vuelos")
-    b_economia = InlineKeyboardButton("Economia", callback_data="economia")
-    b_noticias = InlineKeyboardButton("Noticias", callback_data="noticias")
-    b_deportes = InlineKeyboardButton("Deportes", callback_data="deportes")
+    b_vuelos = InlineKeyboardButton("Vuelos Lowcost", callback_data="Vuelos")
+    b_economia = InlineKeyboardButton("Noticias Economia", callback_data="Economia")
+    b_noticias = InlineKeyboardButton("Noticias Generales", callback_data="Noticias")
+    b_deportes = InlineKeyboardButton("Noticias Deportes", callback_data="Deportes")
     b_busqueda_usuario = InlineKeyboardButton("Otros Intereses", callback_data="busqueda_usuario")
     b_cerar_inicio = InlineKeyboardButton("Cerrar", callback_data="cerrar_inicio")
 
@@ -46,7 +46,22 @@ def preguntar_busqueda(message):
     bot.register_next_step_handler(mensaje_buscar, realizar_busqueda)
 
 def realizar_busqueda(message):
-    texto_buscar = message.text
+    print(message)
+    mensaje_recibido = message.text
+    print(mensaje_recibido)
+
+    if mensaje_recibido == "Vuelos":
+        texto_buscar = "vuelos lowcost"
+    elif mensaje_recibido == "Economia":
+        texto_buscar = "noticias de economia"
+    elif mensaje_recibido == "Noticias":
+        texto_buscar = "noticias generales"
+    elif mensaje_recibido == "Deportes":
+        texto_buscar = "noticias de deportes"
+    else:
+        texto_buscar = message.text
+
+    print(texto_buscar)
     url = f'https://www.google.com.ar/search?q={texto_buscar.replace(" ","+")}&num=12'
     user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36"
     headers = {"user-agent" : user_agent}
@@ -103,14 +118,18 @@ def respuesta_inicio(call):
     if call.data == "cerrar_inicio":
         bot.delete_message(cid, mid)
         return
-    if call.data == "vuelos":
-        pass
-    elif call.data == "economia":
-        pass
-    elif call.data == "noticias":
-        pass
-    elif call.data == "deportes":
-        pass
+    if call.data == "Vuelos":
+        mensaje_busqueda = bot.send_message(cid, "Vuelos")
+        realizar_busqueda(mensaje_busqueda)
+    elif call.data == "Economia":
+        mensaje_busqueda = bot.send_message(cid, "Economia")
+        realizar_busqueda(mensaje_busqueda)
+    elif call.data == "Noticias":
+        mensaje_busqueda = bot.send_message(cid, "Noticias")
+        realizar_busqueda(mensaje_busqueda)
+    elif call.data == "Deportes":
+        mensaje_busqueda = bot.send_message(cid, "Deportes")
+        realizar_busqueda(mensaje_busqueda)
     elif call.data == "busqueda_usuario":
         mensaje_busqueda = bot.send_message(cid, "Nueva busqueda")
         preguntar_busqueda(mensaje_busqueda)
@@ -118,7 +137,6 @@ def respuesta_inicio(call):
         bot.delete_message(cid, mid)
         mensaje_busqueda = bot.send_message(cid, "Nueva busqueda")
         preguntar_busqueda(mensaje_busqueda)
-
 
 
 
