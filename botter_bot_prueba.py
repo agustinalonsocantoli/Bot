@@ -35,6 +35,9 @@ personas_gastos_divididos = []
 # LISTA SORTEO 
 lista_sorteo = []
 
+# CONSTANTES
+N_RES_PAG = 10 # NUMERO DE RESULTADOS A MOSTRAR EN CADA PAGINA
+MAX_ANCHO_ROW = 5 # MAXIMO BOTONES POR FILA ( 8 LIMITACION TELEGRAM )
 
 # COMANDO START SALUDA
 @bot.message_handler(commands=["start"])  
@@ -108,13 +111,13 @@ def cmd_ayuda(message):
         b1 = InlineKeyboardButton("DIVISION DE GASTOS", callback_data="division")
         b2 = InlineKeyboardButton("SORTEO", callback_data="sorteo")
         b3 = InlineKeyboardButton("MERCADOS FINANCIEROS", callback_data="mercados")
-        # b4 = InlineKeyboardButton("INFORMACION GENERAL", callback_data="")
+        b4 = InlineKeyboardButton("BUSCADOR", callback_data="buscador")
         b5 = InlineKeyboardButton("LOCALIZACION", url="https://www.google.es/maps/?hl=es")
         b6 = InlineKeyboardButton("HORA", callback_data="hora")
         b7 = InlineKeyboardButton("FECHA", callback_data="fecha")
         b8 = InlineKeyboardButton("CERRAR", callback_data="cerrar")
 
-        markup.add(b1, b2, b3, b5, b6, b7, b8)
+        markup.add(b1, b2, b3, b4, b5, b6, b7, b8)
         bot.send_message(message.chat.id, f"{nombre} {apellido} En que puedo ayudarlo", reply_markup=markup)
     except:
         bot.send_message(message.chat.id, "Debe ingresar sus datos, pulse /usuario")
@@ -148,8 +151,7 @@ def continuar_finalizar(message):
         markup = ReplyKeyboardMarkup(
         one_time_keyboard=True,
         input_field_placeholder="Pulsa un boton",
-        resize_keyboard=True
-        )
+        resize_keyboard=True)
         markup.add("Agregar", "Finalizar")
         global datos
         datos = bot.send_message(message.chat.id, f"Nombre: {nombre}\nGasto: ${gasto}\n", reply_markup=markup)
@@ -232,6 +234,7 @@ def guardar_personas(message):
                                     gastos_divididos[comienzo] = 0.0
                                 mostrar_cancelaciones = f"{personas[comienzo]} debe {final} a {personas[contador]}"
                                 bot.send_message(message.chat.id, mostrar_cancelaciones)
+                                bot.send_message(message.chat.id, "Si desea continuar presione /ayuda")
 
                         contador += 1
 
@@ -277,6 +280,7 @@ def guardar_sorteo(message):
         mostrar_lista = "\n".join(lista_sorteo)
         resultado_sorteo = choice(lista_sorteo)
         bot.send_message(message.chat.id, f"{mostrar_lista}\n\nHa salido sorteado \"{resultado_sorteo}\"")
+        bot.send_message(message.chat.id, "Si desea continuar presione /ayuda")
     elif message.text == "Agregar":
         definir_marcador(message)
 
@@ -288,9 +292,9 @@ def elegir_mercado(message):
     markup = InlineKeyboardMarkup(row_width=1)
     b_cripto = InlineKeyboardButton("Criptomonedas", callback_data="Criptomonedas")
     b_acciones = InlineKeyboardButton("Acciones", callback_data="Acciones")
-    b_cerar_inicio = InlineKeyboardButton("Cerrar", callback_data="cerrar_inicio")
+    b_cerar_mercados = InlineKeyboardButton("Cerrar", callback_data="cerrar_ayuda")
 
-    markup.add(b_cripto, b_acciones, b_cerar_inicio)
+    markup.add(b_cripto, b_acciones, b_cerar_mercados)
     bot.send_message(message.chat.id, f"Seleccione una opcion!", reply_markup=markup)
 
 
@@ -311,7 +315,7 @@ def mostrar_criptomoneda(message):
     btn13_c = InlineKeyboardButton("LUNC", callback_data="LUNC")
     btn14_c = InlineKeyboardButton("AVAX", callback_data="AVAX")
     btn15_c = InlineKeyboardButton("MANA", callback_data="MANA")
-    b_volver_c = InlineKeyboardButton("Volver", callback_data="volver")
+    b_volver_c = InlineKeyboardButton("Volver", callback_data="volver_mercados")
 
     markup.add(btn1_c, btn2_c, btn3_c, btn4_c, btn5_c, btn6_c, btn7_c, btn8_c, btn9_c, btn10_c, btn11_c, btn12_c, btn13_c, btn14_c, btn15_c, b_volver_c)
     mensaje_cripto = bot.send_message(message.chat.id, f"Seleccione una opcion!", reply_markup=markup)
@@ -335,7 +339,7 @@ def mostrar_accion(message):
     btn13_a = InlineKeyboardButton("IBM", callback_data="IBM")
     btn14_a = InlineKeyboardButton("MC DONALS", callback_data="MC DONALS")
     btn15_a = InlineKeyboardButton("AMERICAN EXPRESS", callback_data="AMERICAN EXPRESS")
-    b_volver_a = InlineKeyboardButton("Volver", callback_data="volver")
+    b_volver_a = InlineKeyboardButton("Volver", callback_data="volver_mercados")
 
     markup.add(btn1_a, btn2_a, btn3_a, btn4_a, btn5_a, btn6_a, btn7_a, btn8_a, btn9_a, btn10_a, btn11_a, btn12_a, btn13_a, btn14_a, btn15_a, b_volver_a)
     mensaje_accion = bot.send_message(message.chat.id, f"Seleccione una opcion!", reply_markup=markup)
@@ -344,6 +348,7 @@ def mostrar_accion(message):
 
 def elegir_criptomoneda(message):
     ingreso_c = message.text
+    coin = ''
 
     if ingreso_c == "BTC":
         coin = 'bitcoin'
@@ -377,16 +382,19 @@ def elegir_criptomoneda(message):
         coin = 'luna-classic'
     
     url_criptos = f'https://www.coindesk.com/price/{coin}/'
-    response = get(url_criptos)
+    user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36"
+    headers = {"user-agent" : user_agent}
+    response = get(url_criptos, headers=headers, timeout=10)
     html_soup_mercados = BeautifulSoup(response.text, 'html.parser')
     cripto = html_soup_mercados.find(class_="typography__StyledTypography-owin6q-0 jvRAOp")
-    precio = cripto.get_text()
-    bot.send_message(message.chat.id, f"USD{precio}")
+    precio_cripto = cripto.get_text()
+    bot.send_message(message.chat.id, f"USD{precio_cripto}")
     
 
 
 def elegir_accion(message):
     ingreso_a = message.text
+    accion = ''
 
     if ingreso_a == "AMD":
         accion = 'adv-micro-device'
@@ -420,12 +428,98 @@ def elegir_accion(message):
         accion = 'mcdonalds'
 
     url_acciones = f'https://es.investing.com/equities/{accion}'
-    response = get(url_acciones)
+    user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36"
+    headers = {"user-agent" : user_agent}
+    response = get(url_acciones, headers=headers, timeout=10)
     html_soup_mercados = BeautifulSoup(response.text, 'html.parser')
-    acciones = html_soup_mercados.find('span', class_="text-2xl")
-    precio = acciones.get_text()
-    bot.send_message(message.chat.id, f"USD{precio}")
+    acc = html_soup_mercados.find('span', class_="text-2xl")
+    precio_acc = acc.get_text()
+    bot.send_message(message.chat.id, f"USD{precio_acc}")
 
+
+# <------------------   CADENA DE FUNCIONES PARA EL MODULO DE BUSCADOR GOOGLE WEB SCRAPING -------------------->
+def opciones_busqueda(message):
+    #BOT DESPLEGA LAS OPCIONES CON BOTONES PARA QUE EL USUARIO SELECCIONE
+    markup = ReplyKeyboardRemove()
+    markup = InlineKeyboardMarkup(row_width=1)
+    b_vuelos = InlineKeyboardButton("Vuelos Lowcost", callback_data="Vuelos")
+    b_economia = InlineKeyboardButton("Noticias Economia", callback_data="Economia")
+    b_noticias = InlineKeyboardButton("Noticias Generales", callback_data="Noticias")
+    b_deportes = InlineKeyboardButton("Noticias Deportes", callback_data="Deportes")
+    b_busqueda_usuario = InlineKeyboardButton("Otros Intereses", callback_data="busqueda_usuario")
+    b_cerar_buscar = InlineKeyboardButton("Cerrar", callback_data="cerrar_ayuda")
+
+    markup.add(b_vuelos, b_economia, b_noticias, b_deportes, b_busqueda_usuario, b_cerar_buscar)
+    bot.send_message(message.chat.id, f"Seleccione una opcion!", reply_markup=markup)
+
+
+def preguntar_busqueda(message):
+    markup = ForceReply()
+    mensaje_buscar = bot.send_message(message.chat.id, f"Que desea buscar?", reply_markup=markup)
+    bot.register_next_step_handler(mensaje_buscar, realizar_busqueda)
+
+def realizar_busqueda(message):
+    
+    mensaje_recibido = message.text
+
+    if mensaje_recibido == "Vuelos":
+        texto_buscar = "vuelos lowcost"
+    elif mensaje_recibido == "Economia":
+        texto_buscar = "noticias de economia"
+    elif mensaje_recibido == "Noticias":
+        texto_buscar = "noticias generales"
+    elif mensaje_recibido == "Deportes":
+        texto_buscar = "noticias de deportes"
+    else:
+        texto_buscar = message.text
+
+    url = f'https://www.google.com.ar/search?q={texto_buscar.replace(" ","+")}&num=12'
+    user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36"
+    headers = {"user-agent" : user_agent}
+    res = get(url, headers=headers, timeout=10)
+    if res.status_code != 200:
+        bot.send_message(message.chat.id, f"Error al buscar")
+        return 1
+    else:
+        soup = BeautifulSoup(res.text, "html.parser")
+        elementos = soup.find_all('div', class_='g')
+        lista_elementos = []
+        for elemento in elementos:
+            try:
+                titulo = elemento.find('h3').text
+                url = elemento.find('a').attrs.get('href')
+                if not url.startswith('http'):
+                    url = 'https://google.es' + url
+                if [titulo, url] in lista_elementos:
+                    continue
+                lista_elementos.append([titulo, url])
+            except:
+                continue       
+
+    mostrar_pagina(lista_elementos, message.chat.id)
+
+
+def mostrar_pagina(lista, cid, pag=0, mid=None):
+    # CREA O EDITA EL MENSAJE DE LA PAGINA QUE CORRESPONDE
+    #CREAMOS BOTONERA
+    markup = InlineKeyboardMarkup(row_width=MAX_ANCHO_ROW)
+    b_volver = InlineKeyboardButton("Nueva Busqueda", callback_data="volver_buscador")
+    inicio = pag*N_RES_PAG # NUMERO DE RESULTADOS INICIO DE PAGINA
+    fin = inicio + N_RES_PAG # NUMERO DE RESULTADOS FIN DE PAGINA 
+    mensaje = f'Resultados {inicio + 1}-{len(lista)}\n\n'
+    n = 1
+    botones = []
+    for item in lista[inicio:fin]:
+        botones.append(InlineKeyboardButton(str(n), url=item[1]))
+        mensaje += f'[<b>{n}</b>] - {item[0]}\n'
+        n += 1
+    markup.add(*botones)
+    markup.row(b_volver)
+    if mid:
+        bot.edit_message_text(mensaje, cid, mid, reply_markup=markup, parse_mode='html', disable_web_page_preview=True)
+    else:
+        bot.send_message(cid, mensaje, reply_markup=markup, parse_mode="html", disable_web_page_preview=True)
+        
 
 # <------------------ FUNCIONES DE TODOS LOS CALLBACK DATA RECIBIDOS -------------------->
 
@@ -446,25 +540,32 @@ def respuesta_botones(call):
     # <<<<<<<<<<<<<<<    CALLBACK DATA ACCIONES PRINCIPALES, OPCIONES DEL BOT    >>>>>>>>>>>>>>>
     if call.data == "cerrar":
         bot.delete_message(cid, mid)
+    elif call.data == "cerrar_ayuda":
+        bot.delete_message(cid, mid)
+        mensaje_menu = bot.send_message(cid, "Menu")
+        cmd_ayuda(mensaje_menu)
     elif call.data == "hora":
         bot.send_message(cid, mensaje_hora)
     elif call.data == "fecha":
         bot.send_message(cid, mensaje_fecha)
     elif call.data == "division":
+        bot.delete_message(cid, mid)
         mensaje_division = bot.send_message(cid, "Iniciar")
         preguntar_persona(mensaje_division)
     elif call.data == "sorteo":
+        bot.delete_message(cid, mid)
         inicio_sorteo = bot.send_message(cid, "Es hora de comenzar")
         definir_marcador(inicio_sorteo)
     elif call.data == "mercados":
+        bot.delete_message(cid, mid)
         inicio_mercados = bot.send_message(cid, "Precios de Criptomonedas y Acciones")
         elegir_mercado(inicio_mercados)
+    elif call.data == "buscador":
+        bot.delete_message(cid, mid)
+        inicio_buscador = bot.send_message(cid, "Selecciona tu opcion o busca lo que desees")
+        opciones_busqueda(inicio_buscador)
 
     # <<<<<<<<<<<<<<<    CALLBACK DATA PARA LAS OPCIONES DE MERCADOS FINANCIEROS    >>>>>>>>>>>>>>>
-    if call.data == "cerrar_inicio":
-        bot.delete_message(cid, mid)
-        bot.send_message(cid, "Si desea continuar presione /ayuda")
-        return
     if call.data == "Criptomonedas":
         bot.delete_message(cid, mid)
         mensaje_cripto = bot.send_message(cid, "Criptomonedas")
@@ -473,10 +574,11 @@ def respuesta_botones(call):
         bot.delete_message(cid, mid)
         mensaje_accion = bot.send_message(cid, "Acciones")
         mostrar_accion(mensaje_accion)
-    elif call.data == "volver":
+    elif call.data == "volver_mercados":
         bot.delete_message(cid, mid)
         mensaje_busqueda = bot.send_message(cid, "Inicio")
         elegir_mercado(mensaje_busqueda)
+   
 
 
     # <<<<<<<<<<<<<<<    CALLBACK DATA PARA LOS RESULTADOS DE LAS CRIPTOMONEDAS   >>>>>>>>>>>>>>>
@@ -573,6 +675,28 @@ def respuesta_botones(call):
     elif call.data == "AMERICAN EXPRESS":
         msg_american = bot.send_message(cid, "AMERICAN EXPRESS")
         elegir_accion(msg_american)
+    
+    
+    # <<<<<<<<<<<<<<<    CALLBACK DATA PARA BUSCADOR DE GOOGLES   >>>>>>>>>>>>>>>
+    if call.data == "Vuelos":
+        mensaje_busqueda = bot.send_message(cid, "Vuelos")
+        realizar_busqueda(mensaje_busqueda)
+    elif call.data == "Economia":
+        mensaje_busqueda = bot.send_message(cid, "Economia")
+        realizar_busqueda(mensaje_busqueda)
+    elif call.data == "Noticias":
+        mensaje_busqueda = bot.send_message(cid, "Noticias")
+        realizar_busqueda(mensaje_busqueda)
+    elif call.data == "Deportes":
+        mensaje_busqueda = bot.send_message(cid, "Deportes")
+        realizar_busqueda(mensaje_busqueda)
+    elif call.data == "busqueda_usuario":
+        mensaje_busqueda = bot.send_message(cid, "Nueva busqueda")
+        preguntar_busqueda(mensaje_busqueda)
+    elif call.data == "volver_buscador":
+        bot.delete_message(cid, mid)
+        mensaje_busqueda = bot.send_message(cid, "Nueva busqueda")
+        opciones_busqueda(mensaje_busqueda)
 
 
 # <------------------   BOT REACCIONA A LOS TEXTOS ENVIADOS POR EL USUARIO -------------------->
