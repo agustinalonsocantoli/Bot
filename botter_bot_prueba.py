@@ -2,25 +2,39 @@ from datetime import datetime
 from lib2to3.pgen2 import token
 import telebot
 import threading
-import locale 
-from random import choice
+import locale # ASIGNAR IDIOMA
+from random import choice # PARA REALIZAR EL SORTEO 
 from telebot.types import ReplyKeyboardMarkup # CREAR BOTONES
 from telebot.types import ForceReply # RESPONDER A LOS MENSAJES DEL BOT
 from telebot.types import ReplyKeyboardRemove # ELIMINAR BOTONES DESPUES DE USARLOS
 from telebot.types import InlineKeyboardMarkup # CREAMOS BOTONERA
 from telebot.types import InlineKeyboardButton # DEFINIMOS BOTONES
-from requests import get
-from bs4 import BeautifulSoup
+from requests import get # WEB SCRAPING 
+from bs4 import BeautifulSoup # WEB SCRAPING
 
 # TOKEN IDENTIFICACION
-token = "5420608268:AAHmtRiwizz4Mpmbuy2GQEuHt4hZhT5Wsp0"
+# token = "5420608268:AAHmtRiwizz4Mpmbuy2GQEuHt4hZhT5Wsp0" # TOKEN BOTTER (CREADO POR AGUS ACOSTA)
+token = "5612970965:AAGdfD8G_BJRFzYDrp6f9n-e7x1g8GunRcQ" # TOKEN EASYBOT (CREADO POR AGUS ALONSO)
 bot = telebot.TeleBot(token)     
+
+# NOMBRE DEL BOT
+# nombre_bot = "Botter" # NOMBRE BOT TOKEN AGUS ACOSTA
+nombre_bot = "EasyBot" # NOMBRE BOT TOKEN AGUS ALONSO
 
 # LENGUAJE ESPAÑOL
 locale.setlocale(locale.LC_ALL, 'es_ES')
 
-# VARIABLE FECHA Y HORA
+# VARIABLES PARA LA FECHA Y HORA
 fecha_hora = datetime.today() 
+dia = f"{fecha_hora.strftime('%A')} {fecha_hora.strftime('%d')}"
+hora = fecha_hora.strftime('%H:%M:%S')
+mes = fecha_hora.strftime('%B')
+anio= fecha_hora.strftime('%Y')
+mensaje_fecha = f"Hoy es {dia.capitalize()} de {mes.capitalize()} del {anio}"
+mensaje_hora = f"Hora actual {hora}"
+
+# VARIABLE MENSAJE DE SALUDO 
+mensaje_saludo = f"Bienvenido a {nombre_bot}!!\nPodras utilizar y aprovechar los elementos de ayuda de nuestra lista."
 
 # LISTA USUARIOS
 usuarios = {}
@@ -35,106 +49,67 @@ personas_gastos_divididos = []
 # LISTA SORTEO 
 lista_sorteo = []
 
-# CONSTANTES
+# CONSTANTES PARA LAS BUSQUEDAS DE GOOGLE
 N_RES_PAG = 10 # NUMERO DE RESULTADOS A MOSTRAR EN CADA PAGINA
 MAX_ANCHO_ROW = 5 # MAXIMO BOTONES POR FILA ( 8 LIMITACION TELEGRAM )
 
-# COMANDO START SALUDA
+# COMANDO START, INICIA EL BOT Y LLAMA LA FUNCION QUE SOLICITA NOMBRE DE USUARIO
 @bot.message_handler(commands=["start"])  
 def cmd_start(message):
-    #BOT INICIA Y SALUDA
     markup = ReplyKeyboardRemove()
-    bot.send_message(message.chat.id, f"Hola soy Botter!!\nEstoy aqui para ayudarte.",
-    reply_markup=markup)
-    cmd_usuario(message)
+    bot.send_message(message.chat.id, f'{mensaje_saludo}\n\n{mensaje_fecha}\n{mensaje_hora}', reply_markup=markup)
+    cargar_nombre(message)
 
 
-# COMANDO USUARIO
-@bot.message_handler(commands=["usuario"])  
-def cmd_usuario(message):
-    #BOT PREGUNTA DATOS DEL USUARIO
+# <------------------   CADENA DE FUNCIONES NOMBRE DEL USUARIO -------------------->
+def cargar_nombre(message):
+    # PREGUNTA NOMBRE
     markup = ForceReply()
-    mensaje_usuario = bot.send_message(message.chat.id, f"Como es tu nombre?", reply_markup=markup)
-    bot.register_next_step_handler(mensaje_usuario, preguntar_apellido)
+    mensaje_usuario = bot.send_message(message.chat.id, f"Dime como te llamas?", reply_markup=markup)
+    bot.register_next_step_handler(mensaje_usuario, guardar_nombre)
 
-# <------------------   CADENA DE FUNCIONES PARA LOS DATOS DEL USUARIO -------------------->
-    
-def preguntar_apellido(message):
-    
+
+def guardar_nombre(message):
+    # GUARDA NOMBRE DEL USUARIO, NOS DIRIGE A LAS OPCIONES
     usuarios[message.chat.id] = {}
     usuarios[message.chat.id]["nombre"] = message.text
     global nombre 
     nombre = usuarios[message.chat.id]["nombre"]
-    markup = ForceReply()
-    mensaje_usuario = bot.send_message(message.chat.id, f"Un gusto {nombre}, como es tu apellido?", reply_markup= markup)
-    bot.register_next_step_handler(mensaje_usuario, confirmar_datos)
+    nombre = nombre.capitalize()
+    datos = bot.send_message(message.chat.id, f"Continuemos {nombre}")
+    cmd_ayuda(datos)
         
 
-def confirmar_datos(message):
-    # MOSTRAMOS DATOS, DEFINIMOS BOTONES DE CONFIRMACION
-    usuarios[message.chat.id]["apellido"] = message.text
-    global apellido 
-    apellido = usuarios[message.chat.id]["apellido"]
-    markup = ReplyKeyboardMarkup(
-       one_time_keyboard=True,
-       input_field_placeholder="Pulsa un boton",
-       resize_keyboard=True
-       )
-    markup.add("Si", "No")
-    global datos
-    datos = bot.send_message(message.chat.id, f"Nombre: {nombre}\nApellido: {apellido}\nTus datos son correcto?", reply_markup=markup)
-    bot.register_next_step_handler(datos, guardar_usuario)
-    
-
-def guardar_usuario(message):
-    # COMPROBAMOS QUE LA ENTRADA SEA VALIDA
-    markup = ReplyKeyboardRemove()
-
-    if message.text != "Si" and message.text != "No":
-        mensaje_usuario = bot.send_message(message.chat.id, "ERROR: Debe pulsar uno de los dos botoness!")
-        bot.register_next_step_handler(mensaje_usuario, guardar_usuario)
-    elif message.text == "Si":
-        bot.send_message(message.chat.id, f"{nombre} {apellido} pulse /ayuda para ver las opciones", reply_markup=markup)
-        del usuarios[message.chat.id]
-    elif message.text == "No":
-        bot.send_message(message.chat.id, "Porfavor vuelva a ingresar sus datos pulsando /usuario", reply_markup=markup)
-
-
-
-# COMANDO AYUDA
-@bot.message_handler(commands=["ayuda"])  
+# <------------------   FUNCION PARA LAS OPCIONES DEL BOT -------------------->
 def cmd_ayuda(message):
-    try:
-        #BOT DESPLEGA LAS OPCIONES CON BOTONES PARA QUE EL USUARIO SELECCIONE
-        markup = ReplyKeyboardRemove()
-        markup = InlineKeyboardMarkup(row_width=1)
-        b1 = InlineKeyboardButton("DIVISION DE GASTOS", callback_data="division")
-        b2 = InlineKeyboardButton("SORTEO", callback_data="sorteo")
-        b3 = InlineKeyboardButton("MERCADOS FINANCIEROS", callback_data="mercados")
-        b4 = InlineKeyboardButton("BUSCADOR", callback_data="buscador")
-        b5 = InlineKeyboardButton("LOCALIZACION", url="https://www.google.es/maps/?hl=es")
-        b6 = InlineKeyboardButton("HORA", callback_data="hora")
-        b7 = InlineKeyboardButton("FECHA", callback_data="fecha")
-        b8 = InlineKeyboardButton("CERRAR", callback_data="cerrar")
+    # NOS MUESTRA LOS BOTONES DE LAS OPCIONES Y NOS DIRIGE AL SELECCIONADO CON UN CALLBACK
+    markup = ReplyKeyboardRemove()
+    markup = InlineKeyboardMarkup(row_width=1)
+    b1 = InlineKeyboardButton("DIVISION DE GASTOS", callback_data="division")
+    b2 = InlineKeyboardButton("SORTEO", callback_data="sorteo")
+    b3 = InlineKeyboardButton("MERCADOS FINANCIEROS", callback_data="mercados")
+    b4 = InlineKeyboardButton("BUSCADOR", callback_data="buscador")
+    b5 = InlineKeyboardButton("LOCALIZACION", url="https://www.google.es/maps/?hl=es")
+    b6 = InlineKeyboardButton("CERRAR", callback_data="cerrar")
 
-        markup.add(b1, b2, b3, b4, b5, b6, b7, b8)
-        bot.send_message(message.chat.id, f"{nombre} {apellido} En que puedo ayudarlo", reply_markup=markup)
-    except:
-        bot.send_message(message.chat.id, "Debe ingresar sus datos, pulse /usuario")
+    markup.add(b1, b2, b3, b4, b5, b6)
+    bot.send_message(message.chat.id, f"Seleccione la opcion que necesite utilizar", reply_markup=markup)
+
 
 
 # <------------------   CADENA DE FUNCIONES PARA EL MODULO DE DIVISION DE GASTOS -------------------->
-
 def preguntar_persona(message):
+    # SE CARGA EL NOMBRE DE LA PERSONA
     markup = ForceReply()
     mensaje_nombre = bot.send_message(message.chat.id, f"Ingrese nombre?", reply_markup=markup)
     bot.register_next_step_handler(mensaje_nombre, preguntar_gasto)
 
     
 def preguntar_gasto(message):
-    
+    # SE CARGA EL GASTO QUE REALIZO
     global nombre
     nombre = message.text
+    nombre = nombre.capitalize()
     personas.append(nombre)
     markup = ForceReply()
     mensaje_gasto = bot.send_message(message.chat.id, f"{nombre} Ingrese gasto!", reply_markup= markup)
@@ -144,7 +119,7 @@ def preguntar_gasto(message):
 def continuar_finalizar(message):
 
     try:
-        # MOSTRAMOS DATOS, DEFINIMOS BOTONES DE CONFIRMACION
+        # MOSTRAMOS DATOS, DEFINIMOS BOTONES PARA AGREGAR MAS PERSONAS O FINALIZAR LAS CUENTAS
         global gasto
         gasto = float(message.text)
         gastos.append(gasto)
@@ -157,23 +132,26 @@ def continuar_finalizar(message):
         datos = bot.send_message(message.chat.id, f"Nombre: {nombre}\nGasto: ${gasto}\n", reply_markup=markup)
         bot.register_next_step_handler(datos, guardar_personas)
     except:
+        # SI EL USUARIO NO INGRESA UN NUMERO NOS TRAE LA EXCEPCION 
         datos_error = bot.send_message(message.chat.id, "Debe ingresar un numero")
         preguntar_gasto(datos_error)
 
 
 def guardar_personas(message):
-    # COMPROBAMOS QUE LA ENTRADA SEA VALIDA
+    # COMPROBAMOS QUE EL USUARIO PRESIONE UN BOTON Y NO INGRESE UN TEXTO 
     markup = ReplyKeyboardRemove()
 
     if message.text != "Agregar" and message.text != "Finalizar":
-        mensaje_usuario = bot.send_message(message.chat.id, "ERROR: Debe pulsar uno de los dos botoness!")
+        mensaje_usuario = bot.send_message(message.chat.id, "ERROR: Debe pulsar uno de los dos botones!")
         bot.register_next_step_handler(mensaje_usuario, guardar_personas)
     elif message.text == "Finalizar":
+        # SI EL USUARIO FINALIZA SE REALIZAN TODAS LAS FUNCIONES DE CALCULOS CORRESPONDIENTES
+        # SE MUESTRAN USUARIOS Y GASTOS 
         indice = 0
         for n in personas:
             for g in gastos:
                 if indice <= len(personas)-1 or indice <= len(gastos)-1:
-                    personas_cargadas.append(f"{personas[indice]} - Gasto: ${gastos[indice]}")
+                    personas_cargadas.append(f"{personas[indice]} - Gasto ${gastos[indice]}")
                     indice += 1
                 else:
                     break
@@ -181,6 +159,7 @@ def guardar_personas(message):
         mostrar_personas_cargadas = "\n".join(personas_cargadas)
         bot.send_message(message.chat.id, mostrar_personas_cargadas, reply_markup=markup)
 
+        # SE SUMAN TODOS LOS GASTOS PARA OBTENER EL TOTAL Y SE DIVIDE POR LA CANTIDAD DE PERSONAS
         suma_gastos = 0
         for gasto in gastos:
             suma_gastos += gasto
@@ -190,6 +169,7 @@ def guardar_personas(message):
         total_cada_uno = round(suma_gastos / personas_a_dividir, 2)
         bot.send_message(message.chat.id, f"${total_cada_uno} cada uno")
 
+        # SE REALIZA LA COMPARACION DEL TOTAL QUE CORRESPONDE Y DE LO QUE LA PERSONA GASTO EN REALIDAD
         indice = 0
         for g in gastos:
             resultado = g - total_cada_uno
@@ -199,19 +179,22 @@ def guardar_personas(message):
         comienzo = 0
         contador = 0
 
+        # SE INDICA SI LA PERSONA DEBE PAGAR O DEBE RECIBIR DETERMINADA SUMA
         indice = 0
         for n in personas:
             for g in gastos:
                 if indice <= len(personas)-1 or indice <= len(gastos)-1:
                     if gastos_divididos[indice] < 0:
-                        personas_gastos_divididos.append(f"{personas[indice]} - PAGA (${gastos_divididos[indice] * -1})")
+                        personas_gastos_divididos.append(f"{personas[indice]} - Abonar (${gastos_divididos[indice] * -1})")
                     elif gastos_divididos[indice] > 0:
-                        personas_gastos_divididos.append(f"{personas[indice]} - RECIBE (${gastos_divididos[indice]})")
+                        personas_gastos_divididos.append(f"{personas[indice]} - Obtener (${gastos_divididos[indice]})")
                     indice += 1
 
         mostrar_division_final = "\n".join(personas_gastos_divididos)
         bot.send_message(message.chat.id, mostrar_division_final)
 
+        # SE COMPARA CADA PERSONA INDIVIDUALMENTE CON TODAS LAS OTRAS PERSONA DE LA LISTA
+        #  Y ASI SE DETERMINA EL MONTO EXACTO Y A QUIEN SE DEBE CANCELAR LOS GASTOS PARA QUEDAR TODOS IGUALES
         while True:
             if comienzo <= personas_a_dividir - 1:
                 for g in gastos_divididos:
@@ -232,9 +215,8 @@ def guardar_personas(message):
                                     final = gastos_divididos[comienzo] * -1
                                     gastos_divididos[contador] = 0.0
                                     gastos_divididos[comienzo] = 0.0
-                                mostrar_cancelaciones = f"{personas[comienzo]} debe {final} a {personas[contador]}"
-                                bot.send_message(message.chat.id, mostrar_cancelaciones)
-                                bot.send_message(message.chat.id, "Si desea continuar presione /ayuda")
+                                mostrar_cancelaciones = f"{personas[comienzo]} cancelar ${final} a {personas[contador]}"
+                                mensaje_opciones = bot.send_message(message.chat.id, mostrar_cancelaciones.upper())
 
                         contador += 1
 
@@ -243,22 +225,25 @@ def guardar_personas(message):
             else:
                 break
 
+        boton_regresar(mensaje_opciones)
+
     elif message.text == "Agregar":
         preguntar_persona(message)
 
 
 # <------------------   CADENA DE FUNCIONES PARA EL MODULO DE SORTEO -------------------->
-
 def definir_marcador(message):
+    # ASIGNAMOS LOS NOMBRES DEL SORTEO 
     markup = ForceReply()
-    mensaje_sorteo = bot.send_message(message.chat.id, f"Nombre o Inicial", reply_markup=markup)
+    mensaje_sorteo = bot.send_message(message.chat.id, f"Ingrese nombre", reply_markup=markup)
     bot.register_next_step_handler(mensaje_sorteo, agregar_sortear)
 
 
 def agregar_sortear(message):
-    # MOSTRAMOS DATOS, DEFINIMOS BOTONES DE CONFIRMACION
+    # MOSTRAMOS NOMBRE, DEFINIMOS BOTONES PARA AGREGAR MAS NOMBRES O SORTEAR
     global marcador
     marcador = message.text
+    marcador = marcador.capitalize()
     lista_sorteo.append(marcador)
     markup = ReplyKeyboardMarkup(
     one_time_keyboard=True,
@@ -267,28 +252,49 @@ def agregar_sortear(message):
     )
     markup.add("Agregar", "Sortear")
     global eleccion
-    eleccion = bot.send_message(message.chat.id, f"Cargo a: {marcador}", reply_markup=markup)
+    eleccion = bot.send_message(message.chat.id, f"Ingreso a {marcador}", reply_markup=markup)
     bot.register_next_step_handler(eleccion, guardar_sorteo)
 
 
 def guardar_sorteo(message):
-    # COMPROBAMOS QUE LA ENTRADA SEA VALIDA
+    # COMPROBAMOS QUE LA ENTRADA SEA VALIDA, DEFINIMOS LA REDIRECCION DE FUNCION PARA AGREGAR Y LA FUNCION PARA SORTEAR
     if message.text != "Agregar" and message.text != "Sortear":
-        mensaje_sorteo = bot.send_message(message.chat.id, "ERROR: Debe pulsar uno de los dos botoness!")
+        mensaje_sorteo = bot.send_message(message.chat.id, "ERROR: Debe pulsar uno de los dos botones!")
         bot.register_next_step_handler(mensaje_sorteo, guardar_personas)
     elif message.text == "Sortear":
         mostrar_lista = "\n".join(lista_sorteo)
         resultado_sorteo = choice(lista_sorteo)
-        bot.send_message(message.chat.id, f"{mostrar_lista}\n\nHa salido sorteado \"{resultado_sorteo}\"")
-        bot.send_message(message.chat.id, "Si desea continuar presione /ayuda")
+        mensaje_resultado = f"Ha salido sorteado \"{resultado_sorteo}\"".upper()
+        mensaje_sorteo = bot.send_message(message.chat.id, f"{mostrar_lista}\n\n{mensaje_resultado}")
+        boton_regresar(mensaje_sorteo)
     elif message.text == "Agregar":
         definir_marcador(message)
 
 
-# <------------------   CADENA DE FUNCIONES PARA EL MODULO DE MERCADOS FINANCIEROS -------------------->
+# <------------------   FUNCIONES PARA REGRESAR AL MENU -------------------->
+def boton_regresar(message):
+    # CREAMOS BOTON DE OPCIONES PARA REGRESAR AL MENU PRINCIPAL UNA VEZ FINALIZADA UNA OPERACION
+    markup = ReplyKeyboardMarkup(
+       one_time_keyboard=True,
+       resize_keyboard=True
+       )
+    markup.add("Opciones")
+    mensaje_opciones = bot.send_message(message.chat.id, f"Pulse Opciones para volver!", reply_markup=markup)
+    bot.register_next_step_handler(mensaje_opciones, confirmar_regreso)
 
+def confirmar_regreso(message):
+    # CONFRIMAMOS QUE EL USUARIO PRESIONE EL BOTON Y LE ABRIMOS EL MENU
+    if message.text != "Opciones":
+        mensaje_opciones = bot.send_message(message.chat.id, "ERROR: Debe pulsar el boton!")
+        bot.register_next_step_handler(mensaje_opciones, guardar_personas)
+    elif message.text == "Opciones":
+        mensaje_opciones = bot.send_message(message.chat.id, f"Regresemos...")
+        cmd_ayuda(mensaje_opciones)
+
+
+# <------------------   CADENA DE FUNCIONES PARA EL MODULO DE MERCADOS FINANCIEROS -------------------->
 def elegir_mercado(message):
-    #BOT DESPLEGA LAS OPCIONES CON BOTONES PARA QUE EL USUARIO SELECCIONE
+    # SE DESPLEGAN LAS OPCIONES DEL MERCADO QUE SE DESEA CONSULTAR O SI SE DESEA VOLVER AL MENU
     markup = InlineKeyboardMarkup(row_width=1)
     b_cripto = InlineKeyboardButton("Criptomonedas", callback_data="Criptomonedas")
     b_acciones = InlineKeyboardButton("Acciones", callback_data="Acciones")
@@ -299,6 +305,7 @@ def elegir_mercado(message):
 
 
 def mostrar_criptomoneda(message):
+    # MOSTRAMOS AL USUARIO BOTONES CON LOS DISTINTOS TIPOS DE MONEDAS PARA CONSULTAR SU PRECIO
     markup = InlineKeyboardMarkup(row_width=1)
     btn1_c = InlineKeyboardButton("BTC", callback_data="BTC")
     btn2_c = InlineKeyboardButton("ETH", callback_data="ETH")
@@ -323,6 +330,7 @@ def mostrar_criptomoneda(message):
 
 
 def mostrar_accion(message):
+    # MOSTRAMOS AL USUARIO BOTONES CON LOS DISTINTOS TIPOS DE ACCIONES PARA CONSULTAR SU PRECIO
     markup = InlineKeyboardMarkup(row_width=1)
     btn1_a = InlineKeyboardButton("NVIDIA", callback_data="NVIDIA")
     btn2_a = InlineKeyboardButton("INTEL", callback_data="INTEL")
@@ -347,6 +355,8 @@ def mostrar_accion(message):
 
 
 def elegir_criptomoneda(message):
+    # ASIGNAMOS LA SELECCION A LA BUSQUEDA WEB SCRAPING
+    # DEVOLVEMOS COMO RESPUESTA SEGUN EL BOTON PRESIONADO EL PRESIO DE LA CRIPTOMONEDA
     ingreso_c = message.text
     coin = ''
 
@@ -393,6 +403,8 @@ def elegir_criptomoneda(message):
 
 
 def elegir_accion(message):
+    # ASIGNAMOS LA SELECCION A LA BUSQUEDA WEB SCRAPING
+    # DEVOLVEMOS COMO RESPUESTA SEGUN EL BOTON PRESIONADO EL PRESIO DE LA ACCION
     ingreso_a = message.text
     accion = ''
 
@@ -439,7 +451,7 @@ def elegir_accion(message):
 
 # <------------------   CADENA DE FUNCIONES PARA EL MODULO DE BUSCADOR GOOGLE WEB SCRAPING -------------------->
 def opciones_busqueda(message):
-    #BOT DESPLEGA LAS OPCIONES CON BOTONES PARA QUE EL USUARIO SELECCIONE
+    # SE DESPLEGAN LAS OPCIONES DE BUSQUEDA O SI SE DESEA VOLVER AL MENU
     markup = ReplyKeyboardRemove()
     markup = InlineKeyboardMarkup(row_width=1)
     b_vuelos = InlineKeyboardButton("Vuelos Lowcost", callback_data="Vuelos")
@@ -454,12 +466,14 @@ def opciones_busqueda(message):
 
 
 def preguntar_busqueda(message):
+    # SI SE SELECCIONA LA OPCION OTROS INTERESES, CON ESTA FUNCION PERMITIMOS EL INGRESO DEL USUARIO Y ASI BUSCAR LO QUE DESEE 
     markup = ForceReply()
     mensaje_buscar = bot.send_message(message.chat.id, f"Que desea buscar?", reply_markup=markup)
     bot.register_next_step_handler(mensaje_buscar, realizar_busqueda)
 
 def realizar_busqueda(message):
-    
+    # REALIZAMOS LA BUSQUEDA DE LO INGRESADO O DE LAS FUNCIONES YA DEFINIDAS
+    # REALIZAMOS EL WEB SCRAPING FILTRANDO LOS ENLACES Y LOS TITULOS
     mensaje_recibido = message.text
 
     if mensaje_recibido == "Vuelos":
@@ -500,8 +514,7 @@ def realizar_busqueda(message):
 
 
 def mostrar_pagina(lista, cid, pag=0, mid=None):
-    # CREA O EDITA EL MENSAJE DE LA PAGINA QUE CORRESPONDE
-    #CREAMOS BOTONERA
+    # CREAMOS BOTONERA CORRESPONDIENTE PARA CADA ENLACE 
     markup = InlineKeyboardMarkup(row_width=MAX_ANCHO_ROW)
     b_volver = InlineKeyboardButton("Nueva Busqueda", callback_data="volver_buscador")
     inicio = pag*N_RES_PAG # NUMERO DE RESULTADOS INICIO DE PAGINA
@@ -522,32 +535,22 @@ def mostrar_pagina(lista, cid, pag=0, mid=None):
         
 
 # <------------------ FUNCIONES DE TODOS LOS CALLBACK DATA RECIBIDOS -------------------->
-
 @bot.callback_query_handler(func=lambda x: True)
 def respuesta_botones(call):
-    # VARIABLES PARA LA FECHA Y HORA
-    dia = f"{fecha_hora.strftime('%A')} {fecha_hora.strftime('%d')}"
-    hora = fecha_hora.strftime('%H:%M:%S')
-    mes = fecha_hora.strftime('%B').capitalize()
-    anio= fecha_hora.strftime('%Y')
-    mensaje_fecha = f"Hoy es {dia} de {mes} Año {anio}"
-    mensaje_hora = f"Son las {hora}"
-
     # GESTIONAR LAS ACCIONES DE LOS BOTONES CALLBACK DATA
     cid = call.from_user.id  # CHAT ID 
     mid = call.message.id  # MENSAJE ID
 
+
     # <<<<<<<<<<<<<<<    CALLBACK DATA ACCIONES PRINCIPALES, OPCIONES DEL BOT    >>>>>>>>>>>>>>>
     if call.data == "cerrar":
         bot.delete_message(cid, mid)
+        mensaje_cerrar = bot.send_message(cid, "...")
+        boton_regresar(mensaje_cerrar)
     elif call.data == "cerrar_ayuda":
         bot.delete_message(cid, mid)
         mensaje_menu = bot.send_message(cid, "Menu")
         cmd_ayuda(mensaje_menu)
-    elif call.data == "hora":
-        bot.send_message(cid, mensaje_hora)
-    elif call.data == "fecha":
-        bot.send_message(cid, mensaje_fecha)
     elif call.data == "division":
         bot.delete_message(cid, mid)
         mensaje_division = bot.send_message(cid, "Iniciar")
@@ -565,6 +568,7 @@ def respuesta_botones(call):
         inicio_buscador = bot.send_message(cid, "Selecciona tu opcion o busca lo que desees")
         opciones_busqueda(inicio_buscador)
 
+
     # <<<<<<<<<<<<<<<    CALLBACK DATA PARA LAS OPCIONES DE MERCADOS FINANCIEROS    >>>>>>>>>>>>>>>
     if call.data == "Criptomonedas":
         bot.delete_message(cid, mid)
@@ -579,7 +583,6 @@ def respuesta_botones(call):
         mensaje_busqueda = bot.send_message(cid, "Inicio")
         elegir_mercado(mensaje_busqueda)
    
-
 
     # <<<<<<<<<<<<<<<    CALLBACK DATA PARA LOS RESULTADOS DE LAS CRIPTOMONEDAS   >>>>>>>>>>>>>>>
     if call.data == "BTC":
@@ -700,14 +703,13 @@ def respuesta_botones(call):
 
 
 # <------------------   BOT REACCIONA A LOS TEXTOS ENVIADOS POR EL USUARIO -------------------->
-
 @bot.message_handler(content_types=["text"])
 def bot_mensaje_texto(message):
-
+    # RESPONDE A UN COMANDO NO VALIDO O A UN INGRESO DEL USUARIO CUANDO NO SE LO SOLICITA
     if message.text and message.text.startswith("/"):
         bot.send_message(message.chat.id, "Comando no definido")
     else:
-        bot.send_message(message.chat.id, "No entiendo lo que quieres decir, ingresa /ayuda")
+        bot.send_message(message.chat.id, "No entiendo lo que quieres decir, continue...")
 
 
 
@@ -720,12 +722,9 @@ if __name__ == '__main__':
 
     # MOSTRAR LOS COMANDOS EN TELEGRAM
     bot.set_my_commands([
-        telebot.types.BotCommand("start", "Inicia el Bot"),
-        telebot.types.BotCommand("usuario", "Completar Datos"),
-        telebot.types.BotCommand("ayuda", "Opciones del Bot")
-    ])
+        telebot.types.BotCommand("start", "Inicia el Bot")
+        ])
 
     # HILO BOT DEFINIDO PARA EJECUTAR LA FUNCION EN SEGUNDO PLANO Y CONTINUAR EL CODIGO 
     hilo_bot = threading.Thread(name="hilo_bot", target=recibir_mensajes)
     hilo_bot.start()
-
