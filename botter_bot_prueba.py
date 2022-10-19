@@ -1,5 +1,5 @@
+from config import * # IMPORTE EL TOKEN 
 from datetime import datetime
-from lib2to3.pgen2 import token
 import telebot
 import threading
 import locale # ASIGNAR IDIOMA
@@ -12,10 +12,8 @@ from telebot.types import InlineKeyboardButton # DEFINIMOS BOTONES
 from requests import get # WEB SCRAPING 
 from bs4 import BeautifulSoup # WEB SCRAPING
 
-# TOKEN IDENTIFICACION
-# token = "5420608268:AAHmtRiwizz4Mpmbuy2GQEuHt4hZhT5Wsp0" # TOKEN BOTTER (CREADO POR AGUS ACOSTA)
-token = "5612970965:AAGdfD8G_BJRFzYDrp6f9n-e7x1g8GunRcQ" # TOKEN EASYBOT (CREADO POR AGUS ALONSO)
-bot = telebot.TeleBot(token)     
+# TOKEN
+bot = telebot.TeleBot(TELEGRAM_TOKEN)     
 
 # NOMBRE DEL BOT
 # nombre_bot = "Botter" # NOMBRE BOT TOKEN AGUS ACOSTA
