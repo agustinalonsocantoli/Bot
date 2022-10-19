@@ -51,6 +51,13 @@ lista_sorteo = []
 N_RES_PAG = 10 # NUMERO DE RESULTADOS A MOSTRAR EN CADA PAGINA
 MAX_ANCHO_ROW = 5 # MAXIMO BOTONES POR FILA ( 8 LIMITACION TELEGRAM )
 
+# VARIABLES PARA EL CLIMA
+WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather?"
+WEATHER_KEY = "&appid=0b8141b26a23e743b2ada55752a3ec71"
+lenguaje = "&lang=es"
+unidad = "&units=metric"
+
+
 # COMANDO START, INICIA EL BOT Y LLAMA LA FUNCION QUE SOLICITA NOMBRE DE USUARIO
 @bot.message_handler(commands=["start"])  
 def cmd_start(message):
@@ -88,9 +95,10 @@ def cmd_ayuda(message):
     b3 = InlineKeyboardButton("MERCADOS FINANCIEROS", callback_data="mercados")
     b4 = InlineKeyboardButton("BUSCADOR", callback_data="buscador")
     b5 = InlineKeyboardButton("LOCALIZACION", url="https://www.google.es/maps/?hl=es")
-    b6 = InlineKeyboardButton("CERRAR", callback_data="cerrar")
+    b6 = InlineKeyboardButton("CLIMA", callback_data="clima")
+    b7 = InlineKeyboardButton("CERRAR", callback_data="cerrar")
 
-    markup.add(b1, b2, b3, b4, b5, b6)
+    markup.add(b1, b2, b3, b4, b5, b6, b7)
     bot.send_message(message.chat.id, f"Seleccione la opcion que necesite utilizar", reply_markup=markup)
 
 
@@ -532,6 +540,51 @@ def mostrar_pagina(lista, cid, pag=0, mid=None):
         bot.send_message(cid, mensaje, reply_markup=markup, parse_mode="html", disable_web_page_preview=True)
         
 
+# <------------------   CADENA DE FUNCIONES PARA EL MODULO DEL CLIMA -------------------->
+def ingresar_ciudad(message):
+    markup = ForceReply()
+    mensaje_ciudad = bot.send_message(message.chat.id, f"Ciudad", reply_markup=markup)
+    bot.register_next_step_handler(mensaje_ciudad, ingresar_pais)
+
+
+def ingresar_pais(message):
+    global ciudad
+    ciudad = message.text
+    ciudad = ciudad.capitalize()
+
+    markup = ForceReply()
+    mensaje_pais = bot.send_message(message.chat.id, f"Pais", reply_markup=markup)
+    bot.register_next_step_handler(mensaje_pais, mostrar_clima)
+
+
+def mostrar_clima(message):
+    global pais
+    pais = message.text 
+    pais = pais.capitalize()
+    
+    url_final = f'{WEATHER_URL}{WEATHER_KEY}&q={ciudad}, {pais}{lenguaje}{unidad}'
+    resp = get(url_final).json()
+
+
+    temp = resp['main']['temp']
+    mensaje_temp = bot.send_message(message.chat.id,f"{ciudad}, {pais}\nTemperatura actual {round(temp, 1)}°C")
+
+    temp_min = resp['main']['temp_min']
+    temp_max = resp['main']['temp_max']
+    bot.send_message(message.chat.id,f"Minima {round(temp_min, 1)}°C - Maxima {round(temp_max, 1)}°C")
+
+    sensacion_termica = resp['main']['feels_like']
+    bot.send_message(message.chat.id, f"Sensación térmica {round(sensacion_termica, 1)}°C")
+
+    humedad = resp['main']['humidity']
+    bot.send_message(message.chat.id,f"Humedad {humedad}%")
+    
+    description = resp['weather'][0]['description']
+    icon = resp['weather'][0]['icon']
+    bot.send_photo(message.chat.id, f"http://openweathermap.org/img/wn/{icon}@2x.png")
+    bot.send_message(message.chat.id,f"Se pronóstica \"{description}\"")
+    boton_regresar(mensaje_temp)
+
 # <------------------ FUNCIONES DE TODOS LOS CALLBACK DATA RECIBIDOS -------------------->
 @bot.callback_query_handler(func=lambda x: True)
 def respuesta_botones(call):
@@ -565,6 +618,10 @@ def respuesta_botones(call):
         bot.delete_message(cid, mid)
         inicio_buscador = bot.send_message(cid, "Selecciona tu opcion o busca lo que desees")
         opciones_busqueda(inicio_buscador)
+    elif call.data == "clima":
+        bot.delete_message(cid, mid)
+        inicio_clima = bot.send_message(cid, "Informacion del Clima")
+        ingresar_ciudad(inicio_clima)
 
 
     # <<<<<<<<<<<<<<<    CALLBACK DATA PARA LAS OPCIONES DE MERCADOS FINANCIEROS    >>>>>>>>>>>>>>>
