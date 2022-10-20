@@ -1,3 +1,4 @@
+from tkinter import Button
 from config import * # IMPORTE EL TOKEN 
 from datetime import datetime # MODULO FECHA Y HORA
 import telebot # MODULO TELEGRAM BOT
@@ -10,6 +11,8 @@ from telebot.types import ForceReply # RESPONDER A LOS MENSAJES DEL BOT
 from telebot.types import ReplyKeyboardRemove # ELIMINAR BOTONES DESPUES DE USARLOS
 from telebot.types import InlineKeyboardMarkup # CREAMOS BOTONERA
 from telebot.types import InlineKeyboardButton # DEFINIMOS BOTONES
+from telebot import types
+from telebot.types import Location
 from requests import get # WEB SCRAPING 
 from bs4 import BeautifulSoup # WEB SCRAPING
 
@@ -331,17 +334,34 @@ def guardar_personas(message):
 # <------------------   CADENA DE FUNCIONES PARA EL MODULO DE LOCALIZACIÓN -------------------->
 def localizacion(message):
     # SOLICITAMOS AL USUARIO EL ORIGEN DE DONDE COMENZARA SU VIAJE 
-    markup = ForceReply()
-    mensaje = bot.send_message(message.chat.id, f"Ingrese datos del viaje\nOrigen: ", reply_markup=markup)
-    bot.register_next_step_handler(mensaje, origin_destiny)
     
+    markup = types.ReplyKeyboardMarkup(row_width=1,one_time_keyboard=True, resize_keyboard=True)
+    button_geo = types.KeyboardButton(text="Establecer posición actual como Origen",request_location=True)
+    markup.add(button_geo, "Ingresar Origen")
+    mensaje = bot.send_message(message.chat.id, "Seleccione una opción", reply_markup=markup)
+    bot.register_next_step_handler(mensaje, origin_destiny)
+
+@bot.message_handler(content_types=['location'])    
 def origin_destiny(message):
     # SOLICITAMOS AL USUARIO EL DESTINO PARA OBTENER LA INFORMACION DE RUTA 
     global origen
-    origen = message.text
+    # CONDICIÓN SI SE ENVIA LA UBICACIÓN
+    if message.location is not None:
+        origen = f"{message.location.latitude},{message.location.longitude}"
+        markup = ForceReply()
+        mensaje = bot.send_message(message.chat.id, "Ingrese destino:", reply_markup=markup)
+        bot.register_next_step_handler(mensaje, viaje)
+    else:
+    # OPCIÓN DE INPUT ORIGEN  
+        markup = ForceReply()
+        mensaje = bot.send_message(message.chat.id, "Ingrese origen:", reply_markup=markup)
+        bot.register_next_step_handler(mensaje, destiny)
+        
+def destiny(message):
     markup = ForceReply()
-    mensaje= bot.send_message(message.chat.id, "Ingrese destino:", reply_markup=markup)
+    mensaje = bot.send_message(message.chat.id, "Ingrese destino:", reply_markup=markup)
     bot.register_next_step_handler(mensaje, viaje)
+               
 
 def viaje(message):
     # NOS CONECTAMOS A LA API DE MAPAS Y MOSTRAMOS EN PANTALLA LA DISTANCIA LA DURACION DEL VIAJE
@@ -353,6 +373,7 @@ def viaje(message):
     status_code = json_data["info"]["statuscode"]
     
     if status_code == 0:
+    #OBTENEOS LOS DATOS EN FORMATO JSON SI ES EXITOSA LA BÚSQUEDA
         trip_duration = json_data["route"]["formattedTime"]
         distance = json_data["route"]["distance"] * 1.61
         latitude_destiny = json_data["route"]["locations"][1]["latLng"]["lat"]
