@@ -301,8 +301,8 @@ def guardar_personas(message):
 def localizacion(message):
     # SOLICITAMOS AL USUARIO EL ORIGEN DE DONDE COMENZARA SU VIAJE 
     
-    markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
-    button_geo = types.KeyboardButton(text="Establecer posición actual como Origen", request_location=True)
+    markup = types.ReplyKeyboardMarkup(row_width=1,one_time_keyboard=True, resize_keyboard=True)
+    button_geo = types.KeyboardButton(text="Establecer posición actual como Origen",request_location=True)
     markup.add(button_geo, "Ingresar Origen")
     mensaje = bot.send_message(message.chat.id, "Seleccione una opción", reply_markup=markup)
     bot.register_next_step_handler(mensaje, origin_destiny)
@@ -311,12 +311,14 @@ def localizacion(message):
 def origin_destiny(message):
     # SOLICITAMOS AL USUARIO EL DESTINO PARA OBTENER LA INFORMACION DE RUTA 
     global origen
+    # CONDICIÓN SI SE ENVIA LA UBICACIÓN
     if message.location is not None:
         origen = f"{message.location.latitude},{message.location.longitude}"
-        print(origen)
+        markup = ForceReply()
         mensaje = bot.send_message(message.chat.id, "Ingrese destino:", reply_markup=markup)
         bot.register_next_step_handler(mensaje, viaje)
-    else: 
+    else:
+    # OPCIÓN DE INPUT ORIGEN  
         origen = message.text
         markup = ForceReply()
         mensaje = bot.send_message(message.chat.id, "Ingrese destino:", reply_markup=markup)
@@ -332,6 +334,7 @@ def viaje(message):
     status_code = json_data["info"]["statuscode"]
     
     if status_code == 0:
+    #OBTENEOS LOS DATOS EN FORMATO JSON SI ES EXITOSA LA BÚSQUEDA
         trip_duration = json_data["route"]["formattedTime"]
         distance = json_data["route"]["distance"] * 1.61
         latitude_destiny = json_data["route"]["locations"][1]["latLng"]["lat"]
