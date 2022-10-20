@@ -5,6 +5,8 @@ name = "pypi"
 
 [packages]
 pytelegrambotapi = "*"
+flask = "*"
+pyngrok = "*"
 
 [dev-packages]
 
