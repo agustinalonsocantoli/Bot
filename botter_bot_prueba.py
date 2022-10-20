@@ -2,7 +2,10 @@ from config import * # IMPORTE EL TOKEN
 from datetime import datetime
 import telebot
 import threading
+import requests
 import locale # ASIGNAR IDIOMA
+import urllib
+
 from random import choice # PARA REALIZAR EL SORTEO 
 from telebot.types import ReplyKeyboardMarkup # CREAR BOTONES
 from telebot.types import ForceReply # RESPONDER A LOS MENSAJES DEL BOT
@@ -11,6 +14,12 @@ from telebot.types import InlineKeyboardMarkup # CREAMOS BOTONERA
 from telebot.types import InlineKeyboardButton # DEFINIMOS BOTONES
 from requests import get # WEB SCRAPING 
 from bs4 import BeautifulSoup # WEB SCRAPING
+
+
+
+# API MAPS
+api_url="http://www.mapquestapi.com/directions/v2/route?"
+key = "AAS76Zb0bjeEQVKeGU04ZfVa3GOxVApG"  
 
 # TOKEN
 bot = telebot.TeleBot(TELEGRAM_TOKEN)     
@@ -43,6 +52,7 @@ gastos = []
 personas_cargadas = []
 gastos_divididos = []
 personas_gastos_divididos = []
+origen_destino = []
 
 # LISTA SORTEO 
 lista_sorteo = []
@@ -94,7 +104,7 @@ def cmd_ayuda(message):
     b2 = InlineKeyboardButton("SORTEO", callback_data="sorteo")
     b3 = InlineKeyboardButton("MERCADOS FINANCIEROS", callback_data="mercados")
     b4 = InlineKeyboardButton("BUSCADOR", callback_data="buscador")
-    b5 = InlineKeyboardButton("LOCALIZACION", url="https://www.google.es/maps/?hl=es")
+    b5 = InlineKeyboardButton("LOCALIZACION", callback_data="localizacion")
     b6 = InlineKeyboardButton("CLIMA", callback_data="clima")
     b7 = InlineKeyboardButton("CERRAR", callback_data="cerrar")
 
@@ -235,7 +245,45 @@ def guardar_personas(message):
 
     elif message.text == "Agregar":
         preguntar_persona(message)
+        
+# <------------------   CADENA DE FUNCIONES PARA EL MODULO DE LOCALIZACIÓN -------------------->
+def localizacion(message):
+    markup = ForceReply()
+    mensaje = bot.send_message(message.chat.id, f"Ingrese datos del viaje\nOrigen: ", reply_markup=markup)
+    bot.register_next_step_handler(mensaje, origin_destiny)
+    
+def origin_destiny(message):
+    global origen
+    origen = message.text
+    markup = ForceReply()
+    mensaje= bot.send_message(message.chat.id, "Imgrese destino:", reply_markup=markup)
+    bot.register_next_step_handler(mensaje, viaje)
 
+def viaje(message):
+    global destino
+    destino = message.text
+    url = api_url + urllib.parse.urlencode({"key":key, "from":origen, "to":destino})
+    json_data = requests.get(url).json()
+    status_code = json_data["info"]["statuscode"]
+    
+    
+    
+
+    if status_code == 0:
+        global trip_duration
+        global distance
+        global fuel_used
+        global latitude_destiny
+        global longitude_destiny
+        trip_duration = json_data["route"]["formattedTime"]
+        distance = json_data["route"]["distance"] * 1.61
+        #fuel_used = json_data["route"][0]["fuelUsed"] * 3.79
+        latitude_destiny = json_data["route"]["locations"][1]["latLng"]["lat"]
+        longitude_destiny = json_data["route"]["locations"][1]["latLng"]["lng"]
+        bot.send_message(message.chat.id,f"Información del viaje\nOrigen: {json_data['route']['locations'][0]['adminArea5']}\n Destino: {json_data['route']['locations'][1]['adminArea5']}")
+        bot.send_message(message.chat.id, f"Duración del viaje: {trip_duration}\nDistancia: {distance:.2f} km")
+        bot.send_location(message.chat.id, latitude=latitude_destiny, longitude=longitude_destiny)
+        # print(json_data["route"]["locations"][1]["latLng"]["lat"])
 
 # <------------------   CADENA DE FUNCIONES PARA EL MODULO DE SORTEO -------------------->
 def definir_marcador(message):
@@ -618,6 +666,10 @@ def respuesta_botones(call):
         bot.delete_message(cid, mid)
         inicio_buscador = bot.send_message(cid, "Selecciona tu opcion o busca lo que desees")
         opciones_busqueda(inicio_buscador)
+    elif call.data == "localizacion":
+        bot.delete_message(cid, mid)
+        inicio_localizacion = bot.send_message(cid, "Comencemos con tu viaje")
+        localizacion(inicio_localizacion)
     elif call.data == "clima":
         bot.delete_message(cid, mid)
         inicio_clima = bot.send_message(cid, "Informacion del Clima")
@@ -783,3 +835,4 @@ if __name__ == '__main__':
     # HILO BOT DEFINIDO PARA EJECUTAR LA FUNCION EN SEGUNDO PLANO Y CONTINUAR EL CODIGO 
     hilo_bot = threading.Thread(name="hilo_bot", target=recibir_mensajes)
     hilo_bot.start()
+
