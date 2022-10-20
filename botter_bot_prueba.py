@@ -15,7 +15,7 @@ from telebot import types
 from telebot.types import Location
 from requests import get # WEB SCRAPING 
 from bs4 import BeautifulSoup # WEB SCRAPING
-
+  
 # TOKEN
 bot = telebot.TeleBot(TELEGRAM_TOKEN)     
 
