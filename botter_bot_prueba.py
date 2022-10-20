@@ -1,9 +1,9 @@
 from config import * # IMPORTE EL TOKEN 
-from datetime import datetime
-import telebot
+from datetime import datetime # MODULO FECHA Y HORA
+import telebot # MODULO TELEGRAM BOT
 import threading
 import locale # ASIGNAR IDIOMA
-import urllib
+import urllib # MODULO PARA API MAPS
 from random import choice # PARA REALIZAR EL SORTEO 
 from telebot.types import ReplyKeyboardMarkup # CREAR BOTONES
 from telebot.types import ForceReply # RESPONDER A LOS MENSAJES DEL BOT
@@ -48,6 +48,9 @@ personas_gastos_divididos = []
 # LISTA SORTEO 
 lista_sorteo = []
 
+# LISTA MAPS
+origen_destino = []
+
 # CONSTANTES PARA LAS BUSQUEDAS DE GOOGLE
 N_RES_PAG = 10 # NUMERO DE RESULTADOS A MOSTRAR EN CADA PAGINA
 MAX_ANCHO_ROW = 5 # MAXIMO BOTONES POR FILA ( 8 LIMITACION TELEGRAM )
@@ -61,7 +64,7 @@ unidad = "&units=metric"
 # VARIABLES MAPS
 api_url="http://www.mapquestapi.com/directions/v2/route?"
 key = "AAS76Zb0bjeEQVKeGU04ZfVa3GOxVApG"  
-origen_destino = []
+
 
 
 # COMANDO START, INICIA EL BOT Y LLAMA LA FUNCION QUE SOLICITA NOMBRE DE USUARIO
@@ -69,7 +72,24 @@ origen_destino = []
 def cmd_start(message):
     markup = ReplyKeyboardRemove()
     bot.send_message(message.chat.id, f'{mensaje_saludo}\n\n{mensaje_fecha}\n{mensaje_hora}', reply_markup=markup)
+    limpiar_listas()
     cargar_nombre(message)
+
+
+# <------------------   FUNCION PARA LIMPIAR LAS LISTAS AL FINALIZAR LOS MODULOS -------------------->
+def limpiar_listas():
+    # LISTAS PARA DIVISION DE GASTOS
+    personas.clear()
+    gastos.clear()
+    personas_cargadas.clear()
+    gastos_divididos.clear()
+    personas_gastos_divididos.clear()
+
+    # LISTA SORTEO 
+    lista_sorteo.clear()
+
+    # LISTA MAPS
+    origen_destino.clear()
 
 
 # <------------------   CADENA DE FUNCIONES NOMBRE DEL USUARIO -------------------->
@@ -121,11 +141,40 @@ def preguntar_gasto(message):
     global nombre
     nombre = message.text
     nombre = nombre.capitalize()
-    personas.append(nombre)
-    markup = ForceReply()
-    mensaje_gasto = bot.send_message(message.chat.id, f"{nombre} Ingrese gasto!", reply_markup= markup)
-    bot.register_next_step_handler(mensaje_gasto, continuar_finalizar)
+    if nombre not in personas:
+        personas.append(nombre)
+        markup = ForceReply()
+        mensaje_gasto = bot.send_message(message.chat.id, f"{nombre} Ingrese gasto!", reply_markup= markup)
+        bot.register_next_step_handler(mensaje_gasto, continuar_finalizar)
+    else:    
+        markup = ForceReply()
+        global nombre_repetido
+        nombre_repetido = personas.index(nombre)
+        print(nombre_repetido)
+        mensaje_gasto = bot.send_message(message.chat.id, f"{nombre} ya se encuentra cargado\nIngrese gasto!", reply_markup= markup)
+        bot.register_next_step_handler(mensaje_gasto, sumar_gasto)
         
+def sumar_gasto(message):
+    
+    try:
+        # MOSTRAMOS DATOS, DEFINIMOS BOTONES PARA AGREGAR MAS PERSONAS O FINALIZAR LAS CUENTAS
+        global gasto
+        gasto = float(message.text)
+        gasto_nuevo = gasto + gastos[nombre_repetido]
+        gastos[nombre_repetido] = gasto_nuevo
+        markup = ReplyKeyboardMarkup(
+        one_time_keyboard=True,
+        input_field_placeholder="Pulsa un boton",
+        resize_keyboard=True)
+        markup.add("Agregar", "Finalizar")
+        global datos
+        datos = bot.send_message(message.chat.id, f"Nombre: {nombre}\nGasto: ${gasto}\n", reply_markup=markup)
+        bot.register_next_step_handler(datos, guardar_personas)
+    except:
+        # SI EL USUARIO NO INGRESA UN NUMERO NOS TRAE LA EXCEPCION 
+        datos_error = bot.send_message(message.chat.id, "Debe ingresar un numero")
+        preguntar_gasto(datos_error)
+
 
 def continuar_finalizar(message):
 
@@ -152,7 +201,10 @@ def guardar_personas(message):
     # COMPROBAMOS QUE EL USUARIO PRESIONE UN BOTON Y NO INGRESE UN TEXTO 
     markup = ReplyKeyboardRemove()
 
-    if message.text != "Agregar" and message.text != "Finalizar":
+    if message.text == '/start':
+        mensaje_start = bot.send_message(message.chat.id, "Iniciando bot")
+        cmd_start(mensaje_start)
+    elif message.text != "Agregar" and message.text != "Finalizar":
         mensaje_usuario = bot.send_message(message.chat.id, "ERROR: Debe pulsar uno de los dos botones!")
         bot.register_next_step_handler(mensaje_usuario, guardar_personas)
     elif message.text == "Finalizar":
@@ -235,7 +287,7 @@ def guardar_personas(message):
                 comienzo += 1
             else:
                 break
-
+        limpiar_listas()
         boton_regresar(mensaje_opciones)
 
     elif message.text == "Agregar":
@@ -244,18 +296,22 @@ def guardar_personas(message):
 
 # <------------------   CADENA DE FUNCIONES PARA EL MODULO DE LOCALIZACIÓN -------------------->
 def localizacion(message):
+    # SOLICITAMOS AL USUARIO EL ORIGEN DE DONDE COMENZARA SU VIAJE 
     markup = ForceReply()
     mensaje = bot.send_message(message.chat.id, f"Ingrese datos del viaje\nOrigen: ", reply_markup=markup)
     bot.register_next_step_handler(mensaje, origin_destiny)
     
 def origin_destiny(message):
+    # SOLICITAMOS AL USUARIO EL DESTINO PARA OBTENER LA INFORMACION DE RUTA 
     global origen
     origen = message.text
     markup = ForceReply()
-    mensaje= bot.send_message(message.chat.id, "Imgrese destino:", reply_markup=markup)
+    mensaje= bot.send_message(message.chat.id, "Ingrese destino:", reply_markup=markup)
     bot.register_next_step_handler(mensaje, viaje)
 
 def viaje(message):
+    # NOS CONECTAMOS A LA API DE MAPAS Y MOSTRAMOS EN PANTALLA LA DISTANCIA LA DURACION DEL VIAJE
+    # MAPA Y ENLACE PARA UNA PRECICION MAS EXACTA 
     global destino
     destino = message.text
     url = api_url + urllib.parse.urlencode({"key":key, "from":origen, "to":destino})
@@ -263,11 +319,6 @@ def viaje(message):
     status_code = json_data["info"]["statuscode"]
     
     if status_code == 0:
-        global trip_duration
-        global distance
-        global fuel_used
-        global latitude_destiny
-        global longitude_destiny
         trip_duration = json_data["route"]["formattedTime"]
         distance = json_data["route"]["distance"] * 1.61
         latitude_destiny = json_data["route"]["locations"][1]["latLng"]["lat"]
@@ -275,6 +326,7 @@ def viaje(message):
         mensaje_viaje = bot.send_message(message.chat.id,f"Información del viaje\nOrigen: {json_data['route']['locations'][0]['adminArea5']}\n Destino: {json_data['route']['locations'][1]['adminArea5']}")
         bot.send_message(message.chat.id, f"Duración del viaje: {trip_duration}\nDistancia: {distance:.2f} km")
         bot.send_location(message.chat.id, latitude=latitude_destiny, longitude=longitude_destiny)
+        limpiar_listas()
         boton_regresar(mensaje_viaje)
 
 
@@ -305,7 +357,10 @@ def agregar_sortear(message):
 
 def guardar_sorteo(message):
     # COMPROBAMOS QUE LA ENTRADA SEA VALIDA, DEFINIMOS LA REDIRECCION DE FUNCION PARA AGREGAR Y LA FUNCION PARA SORTEAR
-    if message.text != "Agregar" and message.text != "Sortear":
+    if message.text == '/start':
+        mensaje_start = bot.send_message(message.chat.id, "Iniciando bot")
+        cmd_start(mensaje_start)
+    elif message.text != "Agregar" and message.text != "Sortear":
         mensaje_sorteo = bot.send_message(message.chat.id, "ERROR: Debe pulsar uno de los dos botones!")
         bot.register_next_step_handler(mensaje_sorteo, guardar_personas)
     elif message.text == "Sortear":
@@ -313,6 +368,7 @@ def guardar_sorteo(message):
         resultado_sorteo = choice(lista_sorteo)
         mensaje_resultado = f"Ha salido sorteado \"{resultado_sorteo}\"".upper()
         mensaje_sorteo = bot.send_message(message.chat.id, f"{mostrar_lista}\n\n{mensaje_resultado}")
+        limpiar_listas()
         boton_regresar(mensaje_sorteo)
     elif message.text == "Agregar":
         definir_marcador(message)
@@ -445,7 +501,7 @@ def elegir_criptomoneda(message):
     html_soup_mercados = BeautifulSoup(response.text, 'html.parser')
     cripto = html_soup_mercados.find(class_="typography__StyledTypography-owin6q-0 jvRAOp")
     precio_cripto = cripto.get_text()
-    bot.send_message(message.chat.id, f"USD{precio_cripto}")
+    bot.send_message(message.chat.id, f"USD {precio_cripto}")
     
 
 
@@ -456,44 +512,44 @@ def elegir_accion(message):
     accion = ''
 
     if ingreso_a == "AMD":
-        accion = 'adv-micro-device'
+        accion = 'AMD'
     elif ingreso_a == "NVIDIA":
-        accion = 'nvidia-corp'
+        accion = 'NVDA'
     elif ingreso_a == "INTEL":
-        accion = 'intel-corp'
+        accion = 'INTC'
     elif ingreso_a == "APPLE":
-        accion = 'apple-computer-inc'
+        accion = 'AAPL'
     elif ingreso_a == "TESLA":
-        accion = 'tesla-motors'
+        accion = 'TSLA'
     elif ingreso_a == "NETFLIX":
-        accion = 'netflix,-inc.'
+        accion = 'NFLX'
     elif ingreso_a == "PEPSICO":
-        accion = 'pepsico'
+        accion = 'PEP'
     elif ingreso_a == "COCA-COLA":
-        accion = 'coca-cola-co'
+        accion = 'KO'
     elif ingreso_a == "AMAZON":
-        accion = 'amazon-com-inc'
+        accion = 'AMZN'
     elif ingreso_a == "EBAY":
-        accion = 'ebay-inc'
+        accion = 'EBAY'
     elif ingreso_a == "NIKE":
-        accion = 'nike'
+        accion = 'NKE'
     elif ingreso_a == "DISNEY":
-        accion = 'disney'
+        accion = 'DIS'
     elif ingreso_a == "AMERICAN EXPRESS":
-        accion = 'american-express'
+        accion = 'AXP'
     elif ingreso_a == "IBM":
-        accion = 'ibm'
+        accion = 'IBM'
     elif ingreso_a == "MC DONALS":
-        accion = 'mcdonalds'
+        accion = 'MCD'
 
-    url_acciones = f'https://es.investing.com/equities/{accion}'
+    url_acciones = f'https://finance.yahoo.com/quote/{accion}'
     user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36"
     headers = {"user-agent" : user_agent}
     response = get(url_acciones, headers=headers, timeout=10)
     html_soup_mercados = BeautifulSoup(response.text, 'html.parser')
-    acc = html_soup_mercados.find('span', class_="text-2xl")
+    acc = html_soup_mercados.find(class_='Fw(b) Fz(36px) Mb(-4px) D(ib)')
     precio_acc = acc.get_text()
-    bot.send_message(message.chat.id, f"USD{precio_acc}")
+    bot.send_message(message.chat.id, f"USD {precio_acc}")
 
 
 # <------------------   CADENA DE FUNCIONES PARA EL MODULO DE BUSCADOR GOOGLE WEB SCRAPING -------------------->
@@ -506,7 +562,7 @@ def opciones_busqueda(message):
     b_noticias = InlineKeyboardButton("Noticias Generales", callback_data="Noticias")
     b_deportes = InlineKeyboardButton("Noticias Deportes", callback_data="Deportes")
     b_busqueda_usuario = InlineKeyboardButton("Otros Intereses", callback_data="busqueda_usuario")
-    b_cerar_buscar = InlineKeyboardButton("Cerrar", callback_data="cerrar_busqueda")
+    b_cerar_buscar = InlineKeyboardButton("Cerrar", callback_data="cerrar_ayuda")
 
     markup.add(b_vuelos, b_economia, b_noticias, b_deportes, b_busqueda_usuario, b_cerar_buscar)
     bot.send_message(message.chat.id, f"Seleccione una opcion!", reply_markup=markup)
@@ -583,12 +639,14 @@ def mostrar_pagina(lista, cid, pag=0, mid=None):
 
 # <------------------   CADENA DE FUNCIONES PARA EL MODULO DEL CLIMA -------------------->
 def ingresar_ciudad(message):
+    # FUNCION INICIO DEL MODULO, PIDE LA CIUDAD DE DONDE SE DESEA CONOCER EL CLIMA
     markup = ForceReply()
     mensaje_ciudad = bot.send_message(message.chat.id, f"Ciudad", reply_markup=markup)
     bot.register_next_step_handler(mensaje_ciudad, ingresar_pais)
 
 
 def ingresar_pais(message):
+    # PEDIMOS PAIS PARA DAR UNA RESPUESTA EXACTA SOBRE LA CIUDAD SOLICITADA POR EL USUARIO
     global ciudad
     ciudad = message.text
     ciudad = ciudad.capitalize()
@@ -599,6 +657,7 @@ def ingresar_pais(message):
 
 
 def mostrar_clima(message):
+    # NOS CONECTAMOS A LA API DEL CLIMA, SOLICITAMOS LA INFORMACIONES Y LA MOSTRAMOS EN PANTALLA 
     global pais
     pais = message.text 
     pais = pais.capitalize()
@@ -639,7 +698,7 @@ def respuesta_botones(call):
         bot.delete_message(cid, mid)
         mensaje_cerrar = bot.send_message(cid, "...")
         boton_regresar(mensaje_cerrar)
-    elif call.data == "cerrar_busqueda":
+    elif call.data == "cerrar_ayuda":
         bot.delete_message(cid, mid)
         mensaje_menu = bot.send_message(cid, "Menu")
         boton_regresar(mensaje_menu)
@@ -817,7 +876,6 @@ def bot_mensaje_texto(message):
         bot.send_message(message.chat.id, "No entiendo lo que quieres decir, continue...")
 
 
-
 # FUNCION BUCLE INFINITO VERIFICA LA RECEPCION DE MENSAJES
 def recibir_mensajes():
     bot.infinity_polling()
@@ -827,7 +885,7 @@ if __name__ == '__main__':
 
     # MOSTRAR LOS COMANDOS EN TELEGRAM
     bot.set_my_commands([
-        telebot.types.BotCommand("start", "Inicia el Bot")
+        telebot.types.BotCommand("start", "Iniciar el Bot")
         ])
 
     # HILO BOT DEFINIDO PARA EJECUTAR LA FUNCION EN SEGUNDO PLANO Y CONTINUAR EL CODIGO 
