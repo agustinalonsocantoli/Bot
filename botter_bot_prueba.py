@@ -2,10 +2,8 @@ from config import * # IMPORTE EL TOKEN
 from datetime import datetime
 import telebot
 import threading
-import requests
 import locale # ASIGNAR IDIOMA
 import urllib
-
 from random import choice # PARA REALIZAR EL SORTEO 
 from telebot.types import ReplyKeyboardMarkup # CREAR BOTONES
 from telebot.types import ForceReply # RESPONDER A LOS MENSAJES DEL BOT
@@ -14,12 +12,6 @@ from telebot.types import InlineKeyboardMarkup # CREAMOS BOTONERA
 from telebot.types import InlineKeyboardButton # DEFINIMOS BOTONES
 from requests import get # WEB SCRAPING 
 from bs4 import BeautifulSoup # WEB SCRAPING
-
-
-
-# API MAPS
-api_url="http://www.mapquestapi.com/directions/v2/route?"
-key = "AAS76Zb0bjeEQVKeGU04ZfVa3GOxVApG"  
 
 # TOKEN
 bot = telebot.TeleBot(TELEGRAM_TOKEN)     
@@ -52,7 +44,6 @@ gastos = []
 personas_cargadas = []
 gastos_divididos = []
 personas_gastos_divididos = []
-origen_destino = []
 
 # LISTA SORTEO 
 lista_sorteo = []
@@ -66,6 +57,11 @@ WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather?"
 WEATHER_KEY = "&appid=0b8141b26a23e743b2ada55752a3ec71"
 lenguaje = "&lang=es"
 unidad = "&units=metric"
+
+# VARIABLES MAPS
+api_url="http://www.mapquestapi.com/directions/v2/route?"
+key = "AAS76Zb0bjeEQVKeGU04ZfVa3GOxVApG"  
+origen_destino = []
 
 
 # COMANDO START, INICIA EL BOT Y LLAMA LA FUNCION QUE SOLICITA NOMBRE DE USUARIO
@@ -110,7 +106,6 @@ def cmd_ayuda(message):
 
     markup.add(b1, b2, b3, b4, b5, b6, b7)
     bot.send_message(message.chat.id, f"Seleccione la opcion que necesite utilizar", reply_markup=markup)
-
 
 
 # <------------------   CADENA DE FUNCIONES PARA EL MODULO DE DIVISION DE GASTOS -------------------->
@@ -246,6 +241,7 @@ def guardar_personas(message):
     elif message.text == "Agregar":
         preguntar_persona(message)
         
+
 # <------------------   CADENA DE FUNCIONES PARA EL MODULO DE LOCALIZACIÓN -------------------->
 def localizacion(message):
     markup = ForceReply()
@@ -263,12 +259,9 @@ def viaje(message):
     global destino
     destino = message.text
     url = api_url + urllib.parse.urlencode({"key":key, "from":origen, "to":destino})
-    json_data = requests.get(url).json()
+    json_data = get(url).json()
     status_code = json_data["info"]["statuscode"]
     
-    
-    
-
     if status_code == 0:
         global trip_duration
         global distance
@@ -277,13 +270,13 @@ def viaje(message):
         global longitude_destiny
         trip_duration = json_data["route"]["formattedTime"]
         distance = json_data["route"]["distance"] * 1.61
-        #fuel_used = json_data["route"][0]["fuelUsed"] * 3.79
         latitude_destiny = json_data["route"]["locations"][1]["latLng"]["lat"]
         longitude_destiny = json_data["route"]["locations"][1]["latLng"]["lng"]
-        bot.send_message(message.chat.id,f"Información del viaje\nOrigen: {json_data['route']['locations'][0]['adminArea5']}\n Destino: {json_data['route']['locations'][1]['adminArea5']}")
+        mensaje_viaje = bot.send_message(message.chat.id,f"Información del viaje\nOrigen: {json_data['route']['locations'][0]['adminArea5']}\n Destino: {json_data['route']['locations'][1]['adminArea5']}")
         bot.send_message(message.chat.id, f"Duración del viaje: {trip_duration}\nDistancia: {distance:.2f} km")
         bot.send_location(message.chat.id, latitude=latitude_destiny, longitude=longitude_destiny)
-        # print(json_data["route"]["locations"][1]["latLng"]["lat"])
+        boton_regresar(mensaje_viaje)
+
 
 # <------------------   CADENA DE FUNCIONES PARA EL MODULO DE SORTEO -------------------->
 def definir_marcador(message):
@@ -513,7 +506,7 @@ def opciones_busqueda(message):
     b_noticias = InlineKeyboardButton("Noticias Generales", callback_data="Noticias")
     b_deportes = InlineKeyboardButton("Noticias Deportes", callback_data="Deportes")
     b_busqueda_usuario = InlineKeyboardButton("Otros Intereses", callback_data="busqueda_usuario")
-    b_cerar_buscar = InlineKeyboardButton("Cerrar", callback_data="cerrar_ayuda")
+    b_cerar_buscar = InlineKeyboardButton("Cerrar", callback_data="cerrar_busqueda")
 
     markup.add(b_vuelos, b_economia, b_noticias, b_deportes, b_busqueda_usuario, b_cerar_buscar)
     bot.send_message(message.chat.id, f"Seleccione una opcion!", reply_markup=markup)
@@ -646,10 +639,10 @@ def respuesta_botones(call):
         bot.delete_message(cid, mid)
         mensaje_cerrar = bot.send_message(cid, "...")
         boton_regresar(mensaje_cerrar)
-    elif call.data == "cerrar_ayuda":
+    elif call.data == "cerrar_busqueda":
         bot.delete_message(cid, mid)
         mensaje_menu = bot.send_message(cid, "Menu")
-        cmd_ayuda(mensaje_menu)
+        boton_regresar(mensaje_menu)
     elif call.data == "division":
         bot.delete_message(cid, mid)
         mensaje_division = bot.send_message(cid, "Iniciar")
@@ -750,8 +743,8 @@ def respuesta_botones(call):
         msg_amd = bot.send_message(cid, "AMD")
         elegir_accion(msg_amd)
     elif call.data == "APPLE":
-        msg_app = bot.send_message(cid, "APPLE")
-        elegir_accion(msg_app)
+        msg_apple = bot.send_message(cid, "APPLE")
+        elegir_accion(msg_apple)
     elif call.data == "TESLA":
         msg_tesla = bot.send_message(cid, "TESLA")
         elegir_accion(msg_tesla)
@@ -789,18 +782,23 @@ def respuesta_botones(call):
     
     # <<<<<<<<<<<<<<<    CALLBACK DATA PARA BUSCADOR DE GOOGLES   >>>>>>>>>>>>>>>
     if call.data == "Vuelos":
+        bot.delete_message(cid, mid)
         mensaje_busqueda = bot.send_message(cid, "Vuelos")
         realizar_busqueda(mensaje_busqueda)
     elif call.data == "Economia":
+        bot.delete_message(cid, mid)
         mensaje_busqueda = bot.send_message(cid, "Economia")
         realizar_busqueda(mensaje_busqueda)
     elif call.data == "Noticias":
+        bot.delete_message(cid, mid)
         mensaje_busqueda = bot.send_message(cid, "Noticias")
         realizar_busqueda(mensaje_busqueda)
     elif call.data == "Deportes":
+        bot.delete_message(cid, mid)
         mensaje_busqueda = bot.send_message(cid, "Deportes")
         realizar_busqueda(mensaje_busqueda)
     elif call.data == "busqueda_usuario":
+        bot.delete_message(cid, mid)
         mensaje_busqueda = bot.send_message(cid, "Nueva busqueda")
         preguntar_busqueda(mensaje_busqueda)
     elif call.data == "volver_buscador":
@@ -835,4 +833,3 @@ if __name__ == '__main__':
     # HILO BOT DEFINIDO PARA EJECUTAR LA FUNCION EN SEGUNDO PLANO Y CONTINUAR EL CODIGO 
     hilo_bot = threading.Thread(name="hilo_bot", target=recibir_mensajes)
     hilo_bot.start()
-
