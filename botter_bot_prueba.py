@@ -1,7 +1,6 @@
 from config import * # IMPORTE EL TOKEN 
 from datetime import datetime # MODULO FECHA Y HORA
 import telebot # MODULO TELEGRAM BOT
-import threading
 import locale # ASIGNAR IDIOMA
 import urllib # MODULO PARA API MAPS
 from random import choice # PARA REALIZAR EL SORTEO 
@@ -22,8 +21,7 @@ import time # USAMOS TIME PARA HACER SLEEP DE 1 SEGUNDO
 bot = telebot.TeleBot(TELEGRAM_TOKEN)     
 
 # NOMBRE DEL BOT
-# nombre_bot = "Botter" # NOMBRE BOT TOKEN AGUS ACOSTA
-nombre_bot = "EasyBot" # NOMBRE BOT TOKEN AGUS ALONSO
+nombre_bot = "EasyBot"
 
 # LENGUAJE ESPAÑOL
 locale.setlocale(locale.LC_ALL, 'es_ES')
