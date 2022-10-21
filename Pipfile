@@ -10,6 +10,7 @@ pyngrok = "*"
 urllib3 = "*"
 beautifulsoup4 = "*"
 locales = "*"
+waitress = "*"
 
 [dev-packages]
 

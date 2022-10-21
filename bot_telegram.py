@@ -1,3 +1,4 @@
+import threading
 from config import * # IMPORTE EL TOKEN 
 from datetime import datetime # MODULO FECHA Y HORA
 import telebot # MODULO TELEGRAM BOT
@@ -13,8 +14,10 @@ from telebot import types
 from requests import get # WEB SCRAPING 
 from bs4 import BeautifulSoup # WEB SCRAPING
 from flask import Flask, request # CREAR SERVIDOR WEB
-from pyngrok import ngrok, conf # CREAR UN TUNEL ENTRE NUESTRO SERVIDOR WEB LOCAL E INTERNET (OBTENIENDO URL PUBLICA)
+# from pyngrok import ngrok, conf # CREAR UN TUNEL ENTRE NUESTRO SERVIDOR WEB LOCAL E INTERNET (OBTENIENDO URL PUBLICA)
 import time # USAMOS TIME PARA HACER SLEEP DE 1 SEGUNDO 
+import os
+from waitress import serve
 
 # TOKEN
 bot = telebot.TeleBot(TELEGRAM_TOKEN)     
@@ -972,6 +975,18 @@ def bot_mensaje_texto(message):
         bot.send_message(message.chat.id, "No entiendo lo que quieres decir, continue...")
 
 
+def polling():
+    bot.remove_webhook()
+    time.sleep(1)
+    bot.infinity_polling()
+
+
+def arrancar_web_server():
+    bot.remove_webhook()
+    time.sleep(1)
+    bot.set_webhook(url=f"https://{APP}.herokuapp.com/")
+    serve(web_server, host="0.0.0.0", port=int(os.environ.get("PORT", 9000)))
+
 # INICIA BOT EN CLASE MAIN
 if __name__ == '__main__':
 
@@ -979,21 +994,28 @@ if __name__ == '__main__':
     bot.set_my_commands([
         telebot.types.BotCommand("start", "Iniciar el Bot")
         ])
+    
+    if os.environ.get("DYNO_RAM"):
+        hilo = threading.Thread(name="hilo_web_server", target=arrancar_web_server)
+    else:
+        hilo = threading.Thread(name="hilo_polling", target=polling)
 
-    # CONFIGURAMOS NGROK
-    conf.get_default().config_path = "./Ngrok/config_ngrok_bot.yml"
-    conf.get_default().region = "sa"
-    # CREAMOS ARCHIVO DE CREDENCIALES DE LA API DE NGROK
-    ngrok.set_auth_token(NGROK_TOKEN)
-    # CREAMOS TUNEL HTTPS EN EL PUERTO 5000
-    ngrok_tunel = ngrok.connect(9000, bind_tls=True)
-    # URL DEL TUNEL CREADO
-    ngrok_url = ngrok_tunel.public_url
-    # ELIMINAMOS WEB HOOK
-    bot.remove_webhook()
-    # PAUSA PARA QUE NO SE PRODUZCA ERROR AL ELIMINAR WEEB HOOK Y CREAR OTRO
-    time.sleep(1)
-    # DEFINIMOS WEB HOOK
-    bot.set_webhook(url=ngrok_url)
-    # ARRANCAR SERVIDOR WEB
-    web_server.run(host="0.0.0.0", port=9000)
+    hilo.start()
+
+    # # CONFIGURAMOS NGROK
+    # conf.get_default().config_path = "./Ngrok/config_ngrok_bot.yml"
+    # conf.get_default().region = "sa"
+    # # CREAMOS ARCHIVO DE CREDENCIALES DE LA API DE NGROK
+    # ngrok.set_auth_token(NGROK_TOKEN)
+    # # CREAMOS TUNEL HTTPS EN EL PUERTO 5000
+    # ngrok_tunel = ngrok.connect(9000, bind_tls=True)
+    # # URL DEL TUNEL CREADO
+    # ngrok_url = ngrok_tunel.public_url
+    # # ELIMINAMOS WEB HOOK
+    # bot.remove_webhook()
+    # # PAUSA PARA QUE NO SE PRODUZCA ERROR AL ELIMINAR WEEB HOOK Y CREAR OTRO
+    # time.sleep(1)
+    # # DEFINIMOS WEB HOOK
+    # bot.set_webhook(url=ngrok_url)
+    # # ARRANCAR SERVIDOR WEB
+    # web_server.run(host="0.0.0.0", port=9000)
