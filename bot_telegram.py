@@ -1,7 +1,7 @@
 from config import * # IMPORTE EL TOKEN 
 from datetime import datetime # MODULO FECHA Y HORA
 import telebot # MODULO TELEGRAM BOT
-# import locale # ASIGNAR IDIOMA
+import locale # ASIGNAR IDIOMA
 import urllib # MODULO PARA API MAPS
 from random import choice # PARA REALIZAR EL SORTEO 
 from telebot.types import ReplyKeyboardMarkup # CREAR BOTONES
@@ -23,7 +23,7 @@ bot = telebot.TeleBot(TELEGRAM_TOKEN)
 nombre_bot = "EasyBot"
 
 # LENGUAJE ESPAÑOL
-# locale.setlocale(locale.LC_ALL, 'es_ES')
+locale.setlocale(locale.LC_ALL, 'es_ES')
 
 # VARIABLES PARA LA FECHA Y HORA
 fecha_hora = datetime.today() 

@@ -8,6 +8,8 @@ pytelegrambotapi = "*"
 flask = "*"
 pyngrok = "*"
 urllib3 = "*"
+beautifulsoup4 = "*"
+locales = "*"
 
 [dev-packages]
 
