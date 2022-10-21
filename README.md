@@ -17,18 +17,18 @@ Clima_
 
 _Te contare y mostrare en detalle como funciona el bot_
 
-![Image text](https://github.com/agustinalonsocantoli/Bot/blob/pilabranch/ImgEasyBot/1.jpg)
+![Image text](https://github.com/agustinalonsocantoli/Bot/blob/main/ImgEasyBot/1.jpg)
 
 
 _- Al iniciar el bot te brindara informacion y solicitara tu nombre, una vez ingresado el mismo desplegara un menu en el cual desidiras la utilidad que te gustaria usar_
 
-![Image text](https://github.com/agustinalonsocantoli/Bot/blob/pilabranch/ImgEasyBot/2.jpg)
+![Image text](https://github.com/agustinalonsocantoli/Bot/blob/main/ImgEasyBot/2.jpg)
 
 _- Division de gastos: Se requiere seleccionar la divisa y cargar Nombre y Gasto de las personas a dividir, en el mismo se indicara que monto gasto cada persona asi una no haya gastado nada debera ingresar 0, ya que el bot realizara el calculo exacto de lo que cada uno gasto y quien deberia cancelar a quien incluyendo el monto para que todos esten saldados._
 
-![Image text](https://github.com/agustinalonsocantoli/Bot/blob/pilabranch/ImgEasyBot/3.jpg)
-![Image text](https://github.com/agustinalonsocantoli/Bot/blob/pilabranch/ImgEasyBot/4.jpg)
-![Image text](https://github.com/agustinalonsocantoli/Bot/blob/pilabranch/ImgEasyBot/5.jpg)
+![Image text](https://github.com/agustinalonsocantoli/Bot/blob/main/ImgEasyBot/3.jpg)
+![Image text](https://github.com/agustinalonsocantoli/Bot/blob/main/ImgEasyBot/4.jpg)
+![Image text](https://github.com/agustinalonsocantoli/Bot/blob/main/ImgEasyBot/5.jpg)
 
 _- Sorteo: Como bien lo indica su nombre realizara un sorteo entre los nombres, numeros o palabras ingresadas._
 
@@ -36,26 +36,26 @@ _- Sorteo: Como bien lo indica su nombre realizara un sorteo entre los nombres, 
 
 _- Mercados Financieros: Al iniciar te presentara 2 opciones, mercado de acciones y mercado de criptomonedas una vez seleccionado uno podras consultar las veces que quieras el precio actualizado de una lista de opciones._
 
-![Image text](https://github.com/agustinalonsocantoli/Bot/blob/pilabranch/ImgEasyBot/7.jpg)
-![Image text](https://github.com/agustinalonsocantoli/Bot/blob/pilabranch/ImgEasyBot/8.jpg)
-![Image text](https://github.com/agustinalonsocantoli/Bot/blob/pilabranch/ImgEasyBot/9.jpg)
-![Image text](https://github.com/agustinalonsocantoli/Bot/blob/pilabranch/ImgEasyBot/10.jpg)
-![Image text](https://github.com/agustinalonsocantoli/Bot/blob/pilabranch/ImgEasyBot/11.jpg)
+![Image text](https://github.com/agustinalonsocantoli/Bot/blob/main/ImgEasyBot/7.jpg)
+![Image text](https://github.com/agustinalonsocantoli/Bot/blob/main/ImgEasyBot/8.jpg)
+![Image text](https://github.com/agustinalonsocantoli/Bot/blob/main/ImgEasyBot/9.jpg)
+![Image text](https://github.com/agustinalonsocantoli/Bot/blob/main/ImgEasyBot/10.jpg)
+![Image text](https://github.com/agustinalonsocantoli/Bot/blob/main/ImgEasyBot/11.jpg)
 
 _- Buscador: Al ingresar podras seleccionar de una lista predeterminada informacion sobre que tema deseas consultar al seleccionar un elemento de la lista nos devolvera varios link a los que podemos acceder. Ojo, si lo que deseamos consultar no se encuentra en la lista podremos seleccionar "Otros Intereses" lo cual nos permitira ingresar a nosotros lo que deseamos buscar._
 
-![Image text](https://github.com/agustinalonsocantoli/Bot/blob/pilabranch/ImgEasyBot/12.jpg)
-![Image text](https://github.com/agustinalonsocantoli/Bot/blob/pilabranch/ImgEasyBot/13.jpg)
-![Image text](https://github.com/agustinalonsocantoli/Bot/blob/pilabranch/ImgEasyBot/14.jpg)
+![Image text](https://github.com/agustinalonsocantoli/Bot/blob/main/ImgEasyBot/12.jpg)
+![Image text](https://github.com/agustinalonsocantoli/Bot/blob/main/ImgEasyBot/13.jpg)
+![Image text](https://github.com/agustinalonsocantoli/Bot/blob/main/ImgEasyBot/14.jpg)
 
 _- Localizacion: Nos dejara ingresar un destino al cual querramos viajar desde nuestro punto de localizacion, o ingresando ambos puntos Partida - Destino lo que como usuario deseemos, al confirmas los mismos nos dara toda la informacion correspondiente del viaje y podremos acceder al mapa_
 
-![Image text](https://github.com/agustinalonsocantoli/Bot/blob/pilabranch/ImgEasyBot/15.jpg)
-![Image text](https://github.com/agustinalonsocantoli/Bot/blob/pilabranch/ImgEasyBot/16.jpg)
+![Image text](https://github.com/agustinalonsocantoli/Bot/blob/main/ImgEasyBot/15.jpg)
+![Image text](https://github.com/agustinalonsocantoli/Bot/blob/main/ImgEasyBot/16.jpg)
 
 _- Clima: Debemos ingresar la ciudad y pais para mas precicion de la ubicacion que deseamos saber el clima y nos dara varios datos del mismo_
 
-![Image text](https://github.com/agustinalonsocantoli/Bot/blob/pilabranch/ImgEasyBot/17.jpg)
+![Image text](https://github.com/agustinalonsocantoli/Bot/blob/main/ImgEasyBot/17.jpg)
 
 ## Requisitos 📋
 
@@ -76,7 +76,7 @@ _El usuario debe contar con Telegram instalado en su dispositivo movil para util
 - [agustinact](https://github.com/agustinact)
 
 
-📫 Como contactarme **agustinalonsocantoli@gmail.com**
+📫 Como contactarnos **agustinalonsocantoli@gmail.com** 
 
 <h4 align="left">Conecta conmigo:</h4>
 <p align="left">
