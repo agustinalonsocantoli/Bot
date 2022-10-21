@@ -76,7 +76,7 @@ _El usuario debe contar con Telegram instalado en su dispositivo movil para util
 - [agustinact](https://github.com/agustinact)
 
 
-📫 Como contactarnos **agustinalonsocantoli@gmail.com** 
+📫 Como contactarnos **agustinalonsocantoli@gmail.com** - **agustin.act@outlook.com**
 
 <h4 align="left">Conecta conmigo:</h4>
 <p align="left">

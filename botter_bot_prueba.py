@@ -980,7 +980,7 @@ if __name__ == '__main__':
         ])
 
     # CONFIGURAMOS NGROK
-    conf.get_default().config_path = "/Users/agustinalonso/Desarrollador/Ngrok/config_ngrok_bot.yml"
+    conf.get_default().config_path = "./Ngrok/config_ngrok_bot.yml"
     conf.get_default().region = "sa"
     # CREAMOS ARCHIVO DE CREDENCIALES DE LA API DE NGROK
     ngrok.set_auth_token(NGROK_TOKEN)
