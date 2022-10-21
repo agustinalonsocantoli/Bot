@@ -72,7 +72,7 @@ web_server = Flask(__name__)
 
 
 # GESTIONA LAS PETICIONES POST ENVIADAS AL SERVIDOR WEB
-@web_server.route('/', methods=['POST'])
+@web_server.route('./', methods=['POST'])
 def webhook():
     # SI EL POST RECIBIDO ES UN JSON
     if request.headers.get("content-type") == "application/json":
