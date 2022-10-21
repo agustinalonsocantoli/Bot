@@ -16,7 +16,6 @@ from flask import Flask, request # CREAR SERVIDOR WEB
 from pyngrok import ngrok, conf # CREAR UN TUNEL ENTRE NUESTRO SERVIDOR WEB LOCAL E INTERNET (OBTENIENDO URL PUBLICA)
 import time # USAMOS TIME PARA HACER SLEEP DE 1 SEGUNDO 
 
-
 # TOKEN
 bot = telebot.TeleBot(TELEGRAM_TOKEN)     
 
@@ -356,9 +355,10 @@ def localizacion(message):
 @bot.message_handler(content_types=['location'])    
 def origin_destiny(message):
     # SOLICITAMOS AL USUARIO EL DESTINO PARA OBTENER LA INFORMACION DE RUTA 
-    global origen
+    
     # CONDICIÓN SI SE ENVIA LA UBICACIÓN
     if message.location is not None:
+        global origen
         origen = f"{message.location.latitude},{message.location.longitude}"
         markup = ForceReply()
         mensaje = bot.send_message(message.chat.id, "Ingrese destino:", reply_markup=markup)
@@ -370,10 +370,11 @@ def origin_destiny(message):
         bot.register_next_step_handler(mensaje, destiny)
         
 def destiny(message):
+    global origen
+    origen = message.text
     markup = ForceReply()
     mensaje = bot.send_message(message.chat.id, "Ingrese destino:", reply_markup=markup)
     bot.register_next_step_handler(mensaje, viaje)
-               
 
 def viaje(message):
     # NOS CONECTAMOS A LA API DE MAPAS Y MOSTRAMOS EN PANTALLA LA DISTANCIA LA DURACION DEL VIAJE
