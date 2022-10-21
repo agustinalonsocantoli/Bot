@@ -26,13 +26,13 @@ nombre_bot = "EasyBot"
 # locale.setlocale(locale.LC_ALL, 'es_ES')
 
 # VARIABLES PARA LA FECHA Y HORA
-fecha_hora = datetime.today() 
-dia = f"{fecha_hora.strftime('%A')} {fecha_hora.strftime('%d')}"
-hora = fecha_hora.strftime('%H:%M:%S')
-mes = fecha_hora.strftime('%B')
-anio= fecha_hora.strftime('%Y')
-mensaje_fecha = f"Hoy es {dia.capitalize()} de {mes.capitalize()} del {anio}"
-mensaje_hora = f"Hora actual {hora}"
+# fecha_hora = datetime.today() 
+# dia = f"{fecha_hora.strftime('%A')} {fecha_hora.strftime('%d')}"
+# hora = fecha_hora.strftime('%H:%M:%S')
+# mes = fecha_hora.strftime('%B')
+# anio= fecha_hora.strftime('%Y')
+# mensaje_fecha = f"Hoy es {dia.capitalize()} de {mes.capitalize()} del {anio}"
+# mensaje_hora = f"Hora actual {hora}"
 
 # VARIABLE MENSAJE DE SALUDO 
 mensaje_saludo = f"Bienvenido a {nombre_bot}!!\nPodras utilizar y aprovechar los elementos de ayuda de nuestra lista."
@@ -85,7 +85,8 @@ def webhook():
 @bot.message_handler(commands=["start"])  
 def cmd_start(message):
     markup = ReplyKeyboardRemove()
-    bot.send_message(message.chat.id, f'{mensaje_saludo}\n\n{mensaje_fecha}\n{mensaje_hora}', reply_markup=markup)
+    bot.send_message(message.chat.id, f'{mensaje_saludo}', reply_markup=markup)
+    # bot.send_message(message.chat.id, f'\n\n{mensaje_fecha}\n{mensaje_hora}', reply_markup=markup)
     limpiar_listas()
     cargar_nombre(message)
 
