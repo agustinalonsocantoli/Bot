@@ -1,9 +1,9 @@
 <h1 align="center">Hola Amigos 👋</h1>
 <h2 align="center">Somos Agustin Alonso Cantoli y Agustin Acosta</h2>
 <h3 align="center">Desarrolladores apasionados de Argentina y España</h3>
-<h3 align="center">🔭 Estamos trabajando en **EasyBot Telegram**</h3>
+<h3 align="center">🔭 Les presentamos "EasyBot"</h3>
 
-<h4 align="left">## Descripcion 📖</h4>
+## Descripcion 📖
 
 _Bot de telegram que brinda ayuda para realizar distintas tareas, la idea de este bot es simplificar fucionalidades cotidianas e incorporarlas todas juntas en un solo lugar. El mismo cuenta con varios modulos que realizan tareas independientes, estos son:
 Division de gastos
@@ -13,7 +13,7 @@ Buscador
 Localizacion
 Clima_
 
-<h4 align="left">## Como funciona el bot? 👨‍💻</h4>
+## Como funciona el bot? 👨‍💻
 
 _Te contare y mostrare en detalle como funciona el bot_
 
@@ -57,11 +57,11 @@ _- Clima: Debemos ingresar la ciudad y pais para mas precicion de la ubicacion q
 
 ![Image text](17)
 
-<h4 align="left">## Requisitos 📋</h4>
+## Requisitos 📋
 
 _El usuario debe contar con Telegram instalado en su dispositivo movil para utilizar el bot y acceder al siguiente link https://t.me/EasyFunctionsBot_
 
-<h4 align="left">Construido con 🛠️</h4>
+## Construido con 🛠️
 
 * [Telebot]
 * [Python]
@@ -76,7 +76,7 @@ _El usuario debe contar con Telegram instalado en su dispositivo movil para util
 - [agustinact](https://github.com/agustinact)
 
 
-📫 Como contactarme **agustinalonsocantoli@gmail.com
+📫 Como contactarme **agustinalonsocantoli@gmail.com**
 
 <h4 align="left">Conecta conmigo:</h4>
 <p align="left">
@@ -85,7 +85,7 @@ _El usuario debe contar con Telegram instalado en su dispositivo movil para util
 <a href="https://discord.gg/#2139" target="blank"><img align="center" src="https://raw.githubusercontent.com/rahuldkjain/github-profile-readme-generator/master/src/images/icons/Social/discord.svg" alt="#2139" height="30" width="40" /></a>
 </p>
 
-<h4 align="left">## Expresiones de Gratitud 🎁</h4>
+## Expresiones de Gratitud 🎁
 
 * Comenta a otros sobre este proyecto 📢
 * Ayudanos con cualquier sugerencia en los contactos mencionados 📢
