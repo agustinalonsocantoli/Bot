@@ -1,4 +1,3 @@
-from tkinter import Button
 from config import * # IMPORTE EL TOKEN 
 from datetime import datetime # MODULO FECHA Y HORA
 import telebot # MODULO TELEGRAM BOT
@@ -12,9 +11,12 @@ from telebot.types import ReplyKeyboardRemove # ELIMINAR BOTONES DESPUES DE USAR
 from telebot.types import InlineKeyboardMarkup # CREAMOS BOTONERA
 from telebot.types import InlineKeyboardButton # DEFINIMOS BOTONES
 from telebot import types
-from telebot.types import Location
 from requests import get # WEB SCRAPING 
 from bs4 import BeautifulSoup # WEB SCRAPING
+from flask import Flask, request # CREAR SERVIDOR WEB
+from pyngrok import ngrok, conf # CREAR UN TUNEL ENTRE NUESTRO SERVIDOR WEB LOCAL E INTERNET (OBTENIENDO URL PUBLICA)
+import time # USAMOS TIME PARA HACER SLEEP DE 1 SEGUNDO 
+
 
 # TOKEN
 bot = telebot.TeleBot(TELEGRAM_TOKEN)     
@@ -68,6 +70,18 @@ unidad = "&units=metric"
 api_url="http://www.mapquestapi.com/directions/v2/route?"
 key = "AAS76Zb0bjeEQVKeGU04ZfVa3GOxVApG"  
 
+# SERVIDOR WEB
+web_server = Flask(__name__)
+
+
+# GESTIONA LAS PETICIONES POST ENVIADAS AL SERVIDOR WEB
+@web_server.route('/', methods=['POST'])
+def webhook():
+    # SI EL POST RECIBIDO ES UN JSON
+    if request.headers.get("content-type") == "application/json":
+        update = telebot.types.Update.de_json(request.stream.read().decode('utf-8'))
+        bot.process_new_updates([update])
+        return "OK", 200
 
 
 # COMANDO START, INICIA EL BOT Y LLAMA LA FUNCION QUE SOLICITA NOMBRE DE USUARIO
@@ -200,7 +214,7 @@ def sumar_gasto(message):
         resize_keyboard=True)
         markup.add("Agregar", "Finalizar")
         global datos
-        datos = bot.send_message(message.chat.id, f"Nombre: {nombre}\nGasto: ${gasto}\n", reply_markup=markup)
+        datos = bot.send_message(message.chat.id, f"Nombre: {nombre}\nGasto: {divisa}{gasto}\n", reply_markup=markup)
         bot.register_next_step_handler(datos, guardar_personas)
     except:
         # SI EL USUARIO NO INGRESA UN NUMERO NOS TRAE LA EXCEPCION 
@@ -519,42 +533,42 @@ def elegir_criptomoneda(message):
     coin = ''
 
     if ingreso_c == "BTC":
-        coin = 'bitcoin'
+        coin = 'BTC-USD'
     elif ingreso_c == "ETH":
-        coin = 'ethereum'
+        coin = 'ETH-USD'
     elif ingreso_c == "BNB":
-        coin = 'binance-coin'
+        coin = 'BNB-USD'
     elif ingreso_c == "ADA":
-        coin = 'cardano'
+        coin = 'ADA-USD'
     elif ingreso_c == "SOL":
-        coin = 'solana'
+        coin = 'SOL-USD'
     elif ingreso_c == "ETC":
-        coin = 'ethereum-classic'
+        coin = 'ETC-USD'
     elif ingreso_c == "AVAX":
-        coin = 'avax'
+        coin = 'AVAX-USD'
     elif ingreso_c == "DOT":
-        coin = 'polkadot'
+        coin = 'DOT-USD'
     elif ingreso_c == "LTC":
-        coin = 'litecoin'
+        coin = 'LTC-USD'
     elif ingreso_c == "SAND":
-        coin = 'the-sandbox'
+        coin = 'SAND-USD'
     elif ingreso_c == "MANA":
-        coin = 'decentraland'
+        coin = 'MANA-USD'
     elif ingreso_c == "MATIC":
-        coin = 'polygon'
+        coin = 'MATIC-USD'
     elif ingreso_c == "DOGE":
-        coin = 'dogecoin'
+        coin = 'DOGE-USD'
     elif ingreso_c == "XRP":
-        coin = 'xrp'
+        coin = 'XRP-USD'
     elif ingreso_c == "LUNC":
-        coin = 'luna-classic'
+        coin = 'LUNC-USD'
     
-    url_criptos = f'https://www.coindesk.com/price/{coin}/'
+    url_criptos = f'https://finance.yahoo.com/quote/{coin}'
     user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36"
     headers = {"user-agent" : user_agent}
     response = get(url_criptos, headers=headers, timeout=10)
     html_soup_mercados = BeautifulSoup(response.text, 'html.parser')
-    cripto = html_soup_mercados.find(class_="typography__StyledTypography-owin6q-0 jvRAOp")
+    cripto = html_soup_mercados.find(class_="Fw(b) Fz(36px) Mb(-4px) D(ib)")
     precio_cripto = cripto.get_text()
     bot.send_message(message.chat.id, f"USD {precio_cripto}")
     
@@ -955,10 +969,6 @@ def bot_mensaje_texto(message):
         bot.send_message(message.chat.id, "No entiendo lo que quieres decir, continue...")
 
 
-# FUNCION BUCLE INFINITO VERIFICA LA RECEPCION DE MENSAJES
-def recibir_mensajes():
-    bot.infinity_polling()
-
 # INICIA BOT EN CLASE MAIN
 if __name__ == '__main__':
 
@@ -967,6 +977,20 @@ if __name__ == '__main__':
         telebot.types.BotCommand("start", "Iniciar el Bot")
         ])
 
-    # HILO BOT DEFINIDO PARA EJECUTAR LA FUNCION EN SEGUNDO PLANO Y CONTINUAR EL CODIGO 
-    hilo_bot = threading.Thread(name="hilo_bot", target=recibir_mensajes)
-    hilo_bot.start()
+    # CONFIGURAMOS NGROK
+    conf.get_default().config_path = "/Users/agustinalonso/Desarrollador/Ngrok/config_ngrok_bot.yml"
+    conf.get_default().region = "sa"
+    # CREAMOS ARCHIVO DE CREDENCIALES DE LA API DE NGROK
+    ngrok.set_auth_token(NGROK_TOKEN)
+    # CREAMOS TUNEL HTTPS EN EL PUERTO 5000
+    ngrok_tunel = ngrok.connect(9000, bind_tls=True)
+    # URL DEL TUNEL CREADO
+    ngrok_url = ngrok_tunel.public_url
+    # ELIMINAMOS WEB HOOK
+    bot.remove_webhook()
+    # PAUSA PARA QUE NO SE PRODUZCA ERROR AL ELIMINAR WEEB HOOK Y CREAR OTRO
+    time.sleep(1)
+    # DEFINIMOS WEB HOOK
+    bot.set_webhook(url=ngrok_url)
+    # ARRANCAR SERVIDOR WEB
+    web_server.run(host="0.0.0.0", port=9000)
