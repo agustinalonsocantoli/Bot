@@ -11,7 +11,7 @@ from telebot.types import InlineKeyboardMarkup # CREAMOS BOTONERA
 from telebot.types import InlineKeyboardButton # DEFINIMOS BOTONES
 from telebot import types
 from requests import get # WEB SCRAPING 
-# from bs4 import BeautifulSoup # WEB SCRAPING
+from bs4 import BeautifulSoup # WEB SCRAPING
 from flask import Flask, request # CREAR SERVIDOR WEB
 from pyngrok import ngrok, conf # CREAR UN TUNEL ENTRE NUESTRO SERVIDOR WEB LOCAL E INTERNET (OBTENIENDO URL PUBLICA)
 import time # USAMOS TIME PARA HACER SLEEP DE 1 SEGUNDO 
@@ -567,10 +567,10 @@ def elegir_criptomoneda(message):
     user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36"
     headers = {"user-agent" : user_agent}
     response = get(url_criptos, headers=headers, timeout=10)
-    # html_soup_mercados = BeautifulSoup(response.text, 'html.parser')
-    # cripto = html_soup_mercados.find(class_="Fw(b) Fz(36px) Mb(-4px) D(ib)")
-    # precio_cripto = cripto.get_text()
-    # bot.send_message(message.chat.id, f"USD {precio_cripto}", reply_markup=markup)
+    html_soup_mercados = BeautifulSoup(response.text, 'html.parser')
+    cripto = html_soup_mercados.find(class_="Fw(b) Fz(36px) Mb(-4px) D(ib)")
+    precio_cripto = cripto.get_text()
+    bot.send_message(message.chat.id, f"USD {precio_cripto}", reply_markup=markup)
     
 
 
@@ -615,11 +615,11 @@ def elegir_accion(message):
     url_acciones = f'https://finance.yahoo.com/quote/{accion}'
     user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36"
     headers = {"user-agent" : user_agent}
-    # response = get(url_acciones, headers=headers, timeout=10)
-    # html_soup_mercados = BeautifulSoup(response.text, 'html.parser')
-    # acc = html_soup_mercados.find(class_='Fw(b) Fz(36px) Mb(-4px) D(ib)')
-    # precio_acc = acc.get_text()
-    # bot.send_message(message.chat.id, f"USD {precio_acc}", reply_markup=markup)
+    response = get(url_acciones, headers=headers, timeout=10)
+    html_soup_mercados = BeautifulSoup(response.text, 'html.parser')
+    acc = html_soup_mercados.find(class_='Fw(b) Fz(36px) Mb(-4px) D(ib)')
+    precio_acc = acc.get_text()
+    bot.send_message(message.chat.id, f"USD {precio_acc}", reply_markup=markup)
 
 
 # <------------------   CADENA DE FUNCIONES PARA EL MODULO DE BUSCADOR GOOGLE WEB SCRAPING -------------------->
@@ -668,22 +668,22 @@ def realizar_busqueda(message):
         bot.send_message(message.chat.id, f"Error al buscar")
         return 1
     else:
-        # soup = BeautifulSoup(res.text, "html.parser")
-        # elementos = soup.find_all('div', class_='g')
+        soup = BeautifulSoup(res.text, "html.parser")
+        elementos = soup.find_all('div', class_='g')
         lista_elementos = []
-        # for elemento in elementos:
-    #         try:
-    #             titulo = elemento.find('h3').text
-    #             url = elemento.find('a').attrs.get('href')
-    #             if not url.startswith('http'):
-    #                 url = 'https://google.es' + url
-    #             if [titulo, url] in lista_elementos:
-    #                 continue
-    #             lista_elementos.append([titulo, url])
-    #         except:
-    #             continue       
+        for elemento in elementos:
+            try:
+                titulo = elemento.find('h3').text
+                url = elemento.find('a').attrs.get('href')
+                if not url.startswith('http'):
+                    url = 'https://google.es' + url
+                if [titulo, url] in lista_elementos:
+                    continue
+                lista_elementos.append([titulo, url])
+            except:
+                continue       
 
-    # mostrar_pagina(lista_elementos, message.chat.id)
+    mostrar_pagina(lista_elementos, message.chat.id)
 
 
 def mostrar_pagina(lista, cid, pag=0, mid=None):
