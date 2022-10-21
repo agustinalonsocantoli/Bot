@@ -1,7 +1,7 @@
 from config import * # IMPORTE EL TOKEN 
 from datetime import datetime # MODULO FECHA Y HORA
 import telebot # MODULO TELEGRAM BOT
-import locale # ASIGNAR IDIOMA
+# import locale # ASIGNAR IDIOMA
 import urllib # MODULO PARA API MAPS
 from random import choice # PARA REALIZAR EL SORTEO 
 from telebot.types import ReplyKeyboardMarkup # CREAR BOTONES
@@ -23,7 +23,7 @@ bot = telebot.TeleBot(TELEGRAM_TOKEN)
 nombre_bot = "EasyBot"
 
 # LENGUAJE ESPAÑOL
-locale.setlocale(locale.LC_ALL, 'es_ES')
+# locale.setlocale(locale.LC_ALL, 'es_ES')
 
 # VARIABLES PARA LA FECHA Y HORA
 fecha_hora = datetime.today() 
@@ -615,7 +615,7 @@ def elegir_accion(message):
     url_acciones = f'https://finance.yahoo.com/quote/{accion}'
     user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36"
     headers = {"user-agent" : user_agent}
-    response = get(url_acciones, headers=headers, timeout=10)
+    # response = get(url_acciones, headers=headers, timeout=10)
     # html_soup_mercados = BeautifulSoup(response.text, 'html.parser')
     # acc = html_soup_mercados.find(class_='Fw(b) Fz(36px) Mb(-4px) D(ib)')
     # precio_acc = acc.get_text()
