@@ -527,6 +527,7 @@ def mostrar_accion(message):
 
 
 def elegir_criptomoneda(message):
+    markup = ReplyKeyboardRemove()
     # ASIGNAMOS LA SELECCION A LA BUSQUEDA WEB SCRAPING
     # DEVOLVEMOS COMO RESPUESTA SEGUN EL BOTON PRESIONADO EL PRESIO DE LA CRIPTOMONEDA
     ingreso_c = message.text
@@ -570,11 +571,12 @@ def elegir_criptomoneda(message):
     html_soup_mercados = BeautifulSoup(response.text, 'html.parser')
     cripto = html_soup_mercados.find(class_="Fw(b) Fz(36px) Mb(-4px) D(ib)")
     precio_cripto = cripto.get_text()
-    bot.send_message(message.chat.id, f"USD {precio_cripto}")
+    bot.send_message(message.chat.id, f"USD {precio_cripto}", reply_markup=markup)
     
 
 
 def elegir_accion(message):
+    markup = ReplyKeyboardRemove()
     # ASIGNAMOS LA SELECCION A LA BUSQUEDA WEB SCRAPING
     # DEVOLVEMOS COMO RESPUESTA SEGUN EL BOTON PRESIONADO EL PRESIO DE LA ACCION
     ingreso_a = message.text
@@ -618,7 +620,7 @@ def elegir_accion(message):
     html_soup_mercados = BeautifulSoup(response.text, 'html.parser')
     acc = html_soup_mercados.find(class_='Fw(b) Fz(36px) Mb(-4px) D(ib)')
     precio_acc = acc.get_text()
-    bot.send_message(message.chat.id, f"USD {precio_acc}")
+    bot.send_message(message.chat.id, f"USD {precio_acc}", reply_markup=markup)
 
 
 # <------------------   CADENA DE FUNCIONES PARA EL MODULO DE BUSCADOR GOOGLE WEB SCRAPING -------------------->
@@ -686,12 +688,13 @@ def realizar_busqueda(message):
 
 
 def mostrar_pagina(lista, cid, pag=0, mid=None):
+    markup = ReplyKeyboardRemove()
     # CREAMOS BOTONERA CORRESPONDIENTE PARA CADA ENLACE 
     markup = InlineKeyboardMarkup(row_width=MAX_ANCHO_ROW)
     b_volver = InlineKeyboardButton("Nueva Busqueda", callback_data="volver_buscador")
     inicio = pag*N_RES_PAG # NUMERO DE RESULTADOS INICIO DE PAGINA
     fin = inicio + N_RES_PAG # NUMERO DE RESULTADOS FIN DE PAGINA 
-    mensaje = f'Resultados {inicio + 1}-{len(lista)}\n\n'
+    mensaje = f'Resultados\n\n'
     n = 1
     botones = []
     for item in lista[inicio:fin]:
