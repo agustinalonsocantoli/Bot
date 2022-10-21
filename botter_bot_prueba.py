@@ -1,8 +1,6 @@
-from tkinter import Button
 from config import * # IMPORTE EL TOKEN 
 from datetime import datetime # MODULO FECHA Y HORA
 import telebot # MODULO TELEGRAM BOT
-import threading
 import locale # ASIGNAR IDIOMA
 import urllib # MODULO PARA API MAPS
 from random import choice # PARA REALIZAR EL SORTEO 
@@ -12,16 +10,17 @@ from telebot.types import ReplyKeyboardRemove # ELIMINAR BOTONES DESPUES DE USAR
 from telebot.types import InlineKeyboardMarkup # CREAMOS BOTONERA
 from telebot.types import InlineKeyboardButton # DEFINIMOS BOTONES
 from telebot import types
-from telebot.types import Location
 from requests import get # WEB SCRAPING 
 from bs4 import BeautifulSoup # WEB SCRAPING
-  
+from flask import Flask, request # CREAR SERVIDOR WEB
+from pyngrok import ngrok, conf # CREAR UN TUNEL ENTRE NUESTRO SERVIDOR WEB LOCAL E INTERNET (OBTENIENDO URL PUBLICA)
+import time # USAMOS TIME PARA HACER SLEEP DE 1 SEGUNDO 
+
 # TOKEN
 bot = telebot.TeleBot(TELEGRAM_TOKEN)     
 
 # NOMBRE DEL BOT
-# nombre_bot = "Botter" # NOMBRE BOT TOKEN AGUS ACOSTA
-nombre_bot = "EasyBot" # NOMBRE BOT TOKEN AGUS ALONSO
+nombre_bot = "EasyBot"
 
 # LENGUAJE ESPAÑOL
 locale.setlocale(locale.LC_ALL, 'es_ES')
@@ -68,6 +67,18 @@ unidad = "&units=metric"
 api_url="http://www.mapquestapi.com/directions/v2/route?"
 key = "AAS76Zb0bjeEQVKeGU04ZfVa3GOxVApG"  
 
+# SERVIDOR WEB
+web_server = Flask(__name__)
+
+
+# GESTIONA LAS PETICIONES POST ENVIADAS AL SERVIDOR WEB
+@web_server.route('/', methods=['POST'])
+def webhook():
+    # SI EL POST RECIBIDO ES UN JSON
+    if request.headers.get("content-type") == "application/json":
+        update = telebot.types.Update.de_json(request.stream.read().decode('utf-8'))
+        bot.process_new_updates([update])
+        return "OK", 200
 
 
 # COMANDO START, INICIA EL BOT Y LLAMA LA FUNCION QUE SOLICITA NOMBRE DE USUARIO
@@ -132,7 +143,37 @@ def cmd_ayuda(message):
 
 
 # <------------------   CADENA DE FUNCIONES PARA EL MODULO DE DIVISION DE GASTOS -------------------->
+def elegir_divisa(message):
+    
+    # MOSTRAMOS AL USUARIO BOTONES CON LOS DISTINTOS TIPOS DE MONEDAS PARA CONSULTAR SU PRECIO
+    markup = InlineKeyboardMarkup(row_width=2)
+    btn_peso = InlineKeyboardButton("$", callback_data="Peso")
+    btn_dolar = InlineKeyboardButton("USD", callback_data="Dolar")
+    btn_euro = InlineKeyboardButton("€", callback_data="Euro")
+    btn_libra = InlineKeyboardButton("£", callback_data="Libra")
+    btn_real = InlineKeyboardButton("R$", callback_data="Real")
+    btn_opciones = InlineKeyboardButton("Volver", callback_data="volver_divisa")
+
+
+    markup.add(btn_peso, btn_dolar, btn_euro, btn_libra, btn_real, btn_opciones)
+    bot.send_message(message.chat.id, f"Seleccione su moneda!", reply_markup=markup)
+
+
 def preguntar_persona(message):
+    ingreso_d = message.text
+    global divisa
+
+    if ingreso_d == "Peso":
+        divisa = "$"
+    elif ingreso_d == "Dolar":
+        divisa = "USD "
+    elif ingreso_d == "Euro":
+        divisa = "€"
+    elif ingreso_d == "Libra":
+        divisa = "£"
+    elif ingreso_d == "Real":
+        divisa = "R$"
+    
     # SE CARGA EL NOMBRE DE LA PERSONA
     markup = ForceReply()
     mensaje_nombre = bot.send_message(message.chat.id, f"Ingrese nombre?", reply_markup=markup)
@@ -153,7 +194,6 @@ def preguntar_gasto(message):
         markup = ForceReply()
         global nombre_repetido
         nombre_repetido = personas.index(nombre)
-        print(nombre_repetido)
         mensaje_gasto = bot.send_message(message.chat.id, f"{nombre} ya se encuentra cargado\nIngrese gasto!", reply_markup= markup)
         bot.register_next_step_handler(mensaje_gasto, sumar_gasto)
         
@@ -171,7 +211,7 @@ def sumar_gasto(message):
         resize_keyboard=True)
         markup.add("Agregar", "Finalizar")
         global datos
-        datos = bot.send_message(message.chat.id, f"Nombre: {nombre}\nGasto: ${gasto}\n", reply_markup=markup)
+        datos = bot.send_message(message.chat.id, f"Nombre: {nombre}\nGasto: {divisa}{gasto}\n", reply_markup=markup)
         bot.register_next_step_handler(datos, guardar_personas)
     except:
         # SI EL USUARIO NO INGRESA UN NUMERO NOS TRAE LA EXCEPCION 
@@ -192,7 +232,7 @@ def continuar_finalizar(message):
         resize_keyboard=True)
         markup.add("Agregar", "Finalizar")
         global datos
-        datos = bot.send_message(message.chat.id, f"Nombre: {nombre}\nGasto: ${gasto}\n", reply_markup=markup)
+        datos = bot.send_message(message.chat.id, f"Nombre: {nombre}\nGasto: {divisa}{gasto}\n", reply_markup=markup)
         bot.register_next_step_handler(datos, guardar_personas)
     except:
         # SI EL USUARIO NO INGRESA UN NUMERO NOS TRAE LA EXCEPCION 
@@ -211,87 +251,92 @@ def guardar_personas(message):
         mensaje_usuario = bot.send_message(message.chat.id, "ERROR: Debe pulsar uno de los dos botones!")
         bot.register_next_step_handler(mensaje_usuario, guardar_personas)
     elif message.text == "Finalizar":
-        # SI EL USUARIO FINALIZA SE REALIZAN TODAS LAS FUNCIONES DE CALCULOS CORRESPONDIENTES
-        # SE MUESTRAN USUARIOS Y GASTOS 
-        indice = 0
-        for n in personas:
+        if len(personas) <= 1 and len(gastos) <= 1:
+            mensaje_error = bot.send_message(message.chat.id, "Debe cargar mas de 1 Persona")
+            limpiar_listas()
+            elegir_divisa(mensaje_error)
+        else:
+            # SI EL USUARIO FINALIZA SE REALIZAN TODAS LAS FUNCIONES DE CALCULOS CORRESPONDIENTES
+            # SE MUESTRAN USUARIOS Y GASTOS 
+            indice = 0
+            for n in personas:
+                for g in gastos:
+                    if indice <= len(personas)-1 or indice <= len(gastos)-1:
+                        personas_cargadas.append(f"{personas[indice]} - Gasto {divisa}{gastos[indice]}")
+                        indice += 1
+                    else:
+                        break
+            
+            mostrar_personas_cargadas = "\n".join(personas_cargadas)
+            bot.send_message(message.chat.id, mostrar_personas_cargadas, reply_markup=markup)
+
+            # SE SUMAN TODOS LOS GASTOS PARA OBTENER EL TOTAL Y SE DIVIDE POR LA CANTIDAD DE PERSONAS
+            suma_gastos = 0
+            for gasto in gastos:
+                suma_gastos += gasto
+            personas_a_dividir = len(personas)
+            bot.send_message(message.chat.id, f"Total {divisa}{suma_gastos}, son {personas_a_dividir} para dividir")
+
+            total_cada_uno = round(suma_gastos / personas_a_dividir, 2)
+            bot.send_message(message.chat.id, f"{divisa}{total_cada_uno} cada uno")
+
+            # SE REALIZA LA COMPARACION DEL TOTAL QUE CORRESPONDE Y DE LO QUE LA PERSONA GASTO EN REALIDAD
+            indice = 0
             for g in gastos:
-                if indice <= len(personas)-1 or indice <= len(gastos)-1:
-                    personas_cargadas.append(f"{personas[indice]} - Gasto ${gastos[indice]}")
-                    indice += 1
+                resultado = g - total_cada_uno
+                indice += 1
+                gastos_divididos.append(resultado)
+
+            comienzo = 0
+            contador = 0
+
+            # SE INDICA SI LA PERSONA DEBE PAGAR O DEBE RECIBIR DETERMINADA SUMA
+            indice = 0
+            for n in personas:
+                for g in gastos:
+                    if indice <= len(personas)-1 or indice <= len(gastos)-1:
+                        if gastos_divididos[indice] < 0:
+                            personas_gastos_divididos.append(f"{personas[indice]} - Abonar ({divisa}{gastos_divididos[indice] * -1})")
+                        elif gastos_divididos[indice] > 0:
+                            personas_gastos_divididos.append(f"{personas[indice]} - Obtener ({divisa}{gastos_divididos[indice]})")
+                        indice += 1
+
+            mostrar_division_final = "\n".join(personas_gastos_divididos)
+            bot.send_message(message.chat.id, mostrar_division_final)
+
+            # SE COMPARA CADA PERSONA INDIVIDUALMENTE CON TODAS LAS OTRAS PERSONA DE LA LISTA
+            #  Y ASI SE DETERMINA EL MONTO EXACTO Y A QUIEN SE DEBE CANCELAR LOS GASTOS PARA QUEDAR TODOS IGUALES
+            while True:
+                if comienzo <= personas_a_dividir - 1:
+                    for g in gastos_divididos:
+                        if contador <= personas_a_dividir - 1:
+                            
+                            if gastos_divididos[comienzo] != 0 and gastos_divididos[contador] != 0:
+                                if gastos_divididos[comienzo] < 0 and gastos_divididos[contador] > 0:
+                                    comparacion = gastos_divididos[comienzo] + gastos_divididos[contador]
+                                    if comparacion < 0:
+                                        final = gastos_divididos[contador]
+                                        gastos_divididos[comienzo] = comparacion
+                                        gastos_divididos[contador] = 0.0
+                                    elif comparacion > 0:
+                                        final = gastos_divididos[comienzo] * -1
+                                        gastos_divididos[contador] = comparacion
+                                        gastos_divididos[comienzo] = 0.0
+                                    elif comparacion == 0:
+                                        final = gastos_divididos[comienzo] * -1
+                                        gastos_divididos[contador] = 0.0
+                                        gastos_divididos[comienzo] = 0.0
+                                    mostrar_cancelaciones = f"{personas[comienzo]} cancelar {divisa}{final} a {personas[contador]}"
+                                    mensaje_opciones = bot.send_message(message.chat.id, mostrar_cancelaciones.upper())
+
+                            contador += 1
+
+                    contador = 0
+                    comienzo += 1
                 else:
                     break
-        
-        mostrar_personas_cargadas = "\n".join(personas_cargadas)
-        bot.send_message(message.chat.id, mostrar_personas_cargadas, reply_markup=markup)
-
-        # SE SUMAN TODOS LOS GASTOS PARA OBTENER EL TOTAL Y SE DIVIDE POR LA CANTIDAD DE PERSONAS
-        suma_gastos = 0
-        for gasto in gastos:
-            suma_gastos += gasto
-        personas_a_dividir = len(personas)
-        bot.send_message(message.chat.id, f"Total ${suma_gastos}, son {personas_a_dividir} para dividir")
-
-        total_cada_uno = round(suma_gastos / personas_a_dividir, 2)
-        bot.send_message(message.chat.id, f"${total_cada_uno} cada uno")
-
-        # SE REALIZA LA COMPARACION DEL TOTAL QUE CORRESPONDE Y DE LO QUE LA PERSONA GASTO EN REALIDAD
-        indice = 0
-        for g in gastos:
-            resultado = g - total_cada_uno
-            indice += 1
-            gastos_divididos.append(resultado)
-
-        comienzo = 0
-        contador = 0
-
-        # SE INDICA SI LA PERSONA DEBE PAGAR O DEBE RECIBIR DETERMINADA SUMA
-        indice = 0
-        for n in personas:
-            for g in gastos:
-                if indice <= len(personas)-1 or indice <= len(gastos)-1:
-                    if gastos_divididos[indice] < 0:
-                        personas_gastos_divididos.append(f"{personas[indice]} - Abonar (${gastos_divididos[indice] * -1})")
-                    elif gastos_divididos[indice] > 0:
-                        personas_gastos_divididos.append(f"{personas[indice]} - Obtener (${gastos_divididos[indice]})")
-                    indice += 1
-
-        mostrar_division_final = "\n".join(personas_gastos_divididos)
-        bot.send_message(message.chat.id, mostrar_division_final)
-
-        # SE COMPARA CADA PERSONA INDIVIDUALMENTE CON TODAS LAS OTRAS PERSONA DE LA LISTA
-        #  Y ASI SE DETERMINA EL MONTO EXACTO Y A QUIEN SE DEBE CANCELAR LOS GASTOS PARA QUEDAR TODOS IGUALES
-        while True:
-            if comienzo <= personas_a_dividir - 1:
-                for g in gastos_divididos:
-                    if contador <= personas_a_dividir - 1:
-                        
-                        if gastos_divididos[comienzo] != 0 and gastos_divididos[contador] != 0:
-                            if gastos_divididos[comienzo] < 0 and gastos_divididos[contador] > 0:
-                                comparacion = gastos_divididos[comienzo] + gastos_divididos[contador]
-                                if comparacion < 0:
-                                    final = gastos_divididos[contador]
-                                    gastos_divididos[comienzo] = comparacion
-                                    gastos_divididos[contador] = 0.0
-                                elif comparacion > 0:
-                                    final = gastos_divididos[comienzo] * -1
-                                    gastos_divididos[contador] = comparacion
-                                    gastos_divididos[comienzo] = 0.0
-                                elif comparacion == 0:
-                                    final = gastos_divididos[comienzo] * -1
-                                    gastos_divididos[contador] = 0.0
-                                    gastos_divididos[comienzo] = 0.0
-                                mostrar_cancelaciones = f"{personas[comienzo]} cancelar ${final} a {personas[contador]}"
-                                mensaje_opciones = bot.send_message(message.chat.id, mostrar_cancelaciones.upper())
-
-                        contador += 1
-
-                contador = 0
-                comienzo += 1
-            else:
-                break
-        limpiar_listas()
-        boton_regresar(mensaje_opciones)
+            limpiar_listas()
+            boton_regresar(mensaje_opciones)
 
     elif message.text == "Agregar":
         preguntar_persona(message)
@@ -481,54 +526,56 @@ def mostrar_accion(message):
 
 
 def elegir_criptomoneda(message):
+    markup = ReplyKeyboardRemove()
     # ASIGNAMOS LA SELECCION A LA BUSQUEDA WEB SCRAPING
     # DEVOLVEMOS COMO RESPUESTA SEGUN EL BOTON PRESIONADO EL PRESIO DE LA CRIPTOMONEDA
     ingreso_c = message.text
     coin = ''
 
     if ingreso_c == "BTC":
-        coin = 'bitcoin'
+        coin = 'BTC-USD'
     elif ingreso_c == "ETH":
-        coin = 'ethereum'
+        coin = 'ETH-USD'
     elif ingreso_c == "BNB":
-        coin = 'binance-coin'
+        coin = 'BNB-USD'
     elif ingreso_c == "ADA":
-        coin = 'cardano'
+        coin = 'ADA-USD'
     elif ingreso_c == "SOL":
-        coin = 'solana'
+        coin = 'SOL-USD'
     elif ingreso_c == "ETC":
-        coin = 'ethereum-classic'
+        coin = 'ETC-USD'
     elif ingreso_c == "AVAX":
-        coin = 'avax'
+        coin = 'AVAX-USD'
     elif ingreso_c == "DOT":
-        coin = 'polkadot'
+        coin = 'DOT-USD'
     elif ingreso_c == "LTC":
-        coin = 'litecoin'
+        coin = 'LTC-USD'
     elif ingreso_c == "SAND":
-        coin = 'the-sandbox'
+        coin = 'SAND-USD'
     elif ingreso_c == "MANA":
-        coin = 'decentraland'
+        coin = 'MANA-USD'
     elif ingreso_c == "MATIC":
-        coin = 'polygon'
+        coin = 'MATIC-USD'
     elif ingreso_c == "DOGE":
-        coin = 'dogecoin'
+        coin = 'DOGE-USD'
     elif ingreso_c == "XRP":
-        coin = 'xrp'
+        coin = 'XRP-USD'
     elif ingreso_c == "LUNC":
-        coin = 'luna-classic'
+        coin = 'LUNC-USD'
     
-    url_criptos = f'https://www.coindesk.com/price/{coin}/'
+    url_criptos = f'https://finance.yahoo.com/quote/{coin}'
     user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36"
     headers = {"user-agent" : user_agent}
     response = get(url_criptos, headers=headers, timeout=10)
     html_soup_mercados = BeautifulSoup(response.text, 'html.parser')
-    cripto = html_soup_mercados.find(class_="typography__StyledTypography-owin6q-0 jvRAOp")
+    cripto = html_soup_mercados.find(class_="Fw(b) Fz(36px) Mb(-4px) D(ib)")
     precio_cripto = cripto.get_text()
-    bot.send_message(message.chat.id, f"USD {precio_cripto}")
+    bot.send_message(message.chat.id, f"USD {precio_cripto}", reply_markup=markup)
     
 
 
 def elegir_accion(message):
+    markup = ReplyKeyboardRemove()
     # ASIGNAMOS LA SELECCION A LA BUSQUEDA WEB SCRAPING
     # DEVOLVEMOS COMO RESPUESTA SEGUN EL BOTON PRESIONADO EL PRESIO DE LA ACCION
     ingreso_a = message.text
@@ -572,7 +619,7 @@ def elegir_accion(message):
     html_soup_mercados = BeautifulSoup(response.text, 'html.parser')
     acc = html_soup_mercados.find(class_='Fw(b) Fz(36px) Mb(-4px) D(ib)')
     precio_acc = acc.get_text()
-    bot.send_message(message.chat.id, f"USD {precio_acc}")
+    bot.send_message(message.chat.id, f"USD {precio_acc}", reply_markup=markup)
 
 
 # <------------------   CADENA DE FUNCIONES PARA EL MODULO DE BUSCADOR GOOGLE WEB SCRAPING -------------------->
@@ -640,12 +687,13 @@ def realizar_busqueda(message):
 
 
 def mostrar_pagina(lista, cid, pag=0, mid=None):
+    markup = ReplyKeyboardRemove()
     # CREAMOS BOTONERA CORRESPONDIENTE PARA CADA ENLACE 
     markup = InlineKeyboardMarkup(row_width=MAX_ANCHO_ROW)
     b_volver = InlineKeyboardButton("Nueva Busqueda", callback_data="volver_buscador")
     inicio = pag*N_RES_PAG # NUMERO DE RESULTADOS INICIO DE PAGINA
     fin = inicio + N_RES_PAG # NUMERO DE RESULTADOS FIN DE PAGINA 
-    mensaje = f'Resultados {inicio + 1}-{len(lista)}\n\n'
+    mensaje = f'Resultados\n\n'
     n = 1
     botones = []
     for item in lista[inicio:fin]:
@@ -715,7 +763,6 @@ def respuesta_botones(call):
     cid = call.from_user.id  # CHAT ID 
     mid = call.message.id  # MENSAJE ID
 
-
     # <<<<<<<<<<<<<<<    CALLBACK DATA ACCIONES PRINCIPALES, OPCIONES DEL BOT    >>>>>>>>>>>>>>>
     if call.data == "cerrar":
         bot.delete_message(cid, mid)
@@ -727,8 +774,8 @@ def respuesta_botones(call):
         boton_regresar(mensaje_menu)
     elif call.data == "division":
         bot.delete_message(cid, mid)
-        mensaje_division = bot.send_message(cid, "Iniciar")
-        preguntar_persona(mensaje_division)
+        mensaje_division = bot.send_message(cid, "Iniciemos")
+        elegir_divisa(mensaje_division)
     elif call.data == "sorteo":
         bot.delete_message(cid, mid)
         inicio_sorteo = bot.send_message(cid, "Es hora de comenzar")
@@ -750,6 +797,31 @@ def respuesta_botones(call):
         inicio_clima = bot.send_message(cid, "Informacion del Clima")
         ingresar_ciudad(inicio_clima)
 
+    # <<<<<<<<<<<<<<<    CALLBACK DATA PARA MONEDAS MODULO  DIVISION DE GASTOS    >>>>>>>>>>>>>>>
+    if call.data == "Peso":
+        bot.delete_message(cid, mid)
+        mensaje_peso = bot.send_message(cid, "Peso")
+        preguntar_persona(mensaje_peso)
+    elif call.data == "Dolar":
+        bot.delete_message(cid, mid)
+        mensaje_dolar = bot.send_message(cid, "Dolar")
+        preguntar_persona(mensaje_dolar)
+    elif call.data == "Euro":
+        bot.delete_message(cid, mid)
+        mensaje_euro = bot.send_message(cid, "Euro")
+        preguntar_persona(mensaje_euro)
+    elif call.data == "Libra":
+        bot.delete_message(cid, mid)
+        mensaje_libra = bot.send_message(cid, "Libra")
+        preguntar_persona(mensaje_libra)
+    elif call.data == "Real":
+        bot.delete_message(cid, mid)
+        mensaje_real = bot.send_message(cid, "Real")
+        preguntar_persona(mensaje_real)
+    elif call.data == "volver_divisa":
+        bot.delete_message(cid, mid)
+        mensaje_busqueda = bot.send_message(cid, "...")
+        cmd_ayuda(mensaje_busqueda)
 
     # <<<<<<<<<<<<<<<    CALLBACK DATA PARA LAS OPCIONES DE MERCADOS FINANCIEROS    >>>>>>>>>>>>>>>
     if call.data == "Criptomonedas":
@@ -899,10 +971,6 @@ def bot_mensaje_texto(message):
         bot.send_message(message.chat.id, "No entiendo lo que quieres decir, continue...")
 
 
-# FUNCION BUCLE INFINITO VERIFICA LA RECEPCION DE MENSAJES
-def recibir_mensajes():
-    bot.infinity_polling()
-
 # INICIA BOT EN CLASE MAIN
 if __name__ == '__main__':
 
@@ -911,6 +979,20 @@ if __name__ == '__main__':
         telebot.types.BotCommand("start", "Iniciar el Bot")
         ])
 
-    # HILO BOT DEFINIDO PARA EJECUTAR LA FUNCION EN SEGUNDO PLANO Y CONTINUAR EL CODIGO 
-    hilo_bot = threading.Thread(name="hilo_bot", target=recibir_mensajes)
-    hilo_bot.start()
+    # CONFIGURAMOS NGROK
+    conf.get_default().config_path = "/Users/agustinalonso/Desarrollador/Ngrok/config_ngrok_bot.yml"
+    conf.get_default().region = "sa"
+    # CREAMOS ARCHIVO DE CREDENCIALES DE LA API DE NGROK
+    ngrok.set_auth_token(NGROK_TOKEN)
+    # CREAMOS TUNEL HTTPS EN EL PUERTO 5000
+    ngrok_tunel = ngrok.connect(9000, bind_tls=True)
+    # URL DEL TUNEL CREADO
+    ngrok_url = ngrok_tunel.public_url
+    # ELIMINAMOS WEB HOOK
+    bot.remove_webhook()
+    # PAUSA PARA QUE NO SE PRODUZCA ERROR AL ELIMINAR WEEB HOOK Y CREAR OTRO
+    time.sleep(1)
+    # DEFINIMOS WEB HOOK
+    bot.set_webhook(url=ngrok_url)
+    # ARRANCAR SERVIDOR WEB
+    web_server.run(host="0.0.0.0", port=9000)
